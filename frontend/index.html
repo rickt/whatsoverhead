@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+	  <link rel="icon" href="whatsoverhead.ico" type="image/x-icon">
+    <title>What's Overhead?</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+            text-align: center;
+        }
+        #findPlaneBtn {
+            padding: 15px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #findPlaneBtn:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            border-radius: 5px;
+            min-height: 50px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>What aircraft is overhead?</h1>
+	 <p>
+	 Please allow location access to this page! 
+	 </p>
+    <button id="findPlaneBtn">Find Nearest Aircraft</button>
+
+    <div id="result"></div>
+
+    <script>
+        // Select the button and result div
+        const findPlaneBtn = document.getElementById('findPlaneBtn');
+        const resultDiv = document.getElementById('result');
+
+        // Function to display messages
+        function displayMessage(message, isError = false) {
+            resultDiv.innerHTML = '';
+            const p = document.createElement('p');
+            p.textContent = message;
+            p.className = isError ? 'error' : 'success';
+            resultDiv.appendChild(p);
+        }
+
+        // Function to handle the button click
+        findPlaneBtn.addEventListener('click', () => {
+            // Clear previous results
+            displayMessage('Requesting location...', false);
+
+            // Check if Geolocation API is supported
+            if (!navigator.geolocation) {
+                displayMessage('Geolocation is not supported by your browser.', true);
+                return;
+            }
+
+            // Request the user's location
+            navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        });
+
+        // Success callback for geolocation
+        function successCallback(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const distance = 2; // in kilometers
+
+            // Prepare the payload
+            const payload = {
+                lat: latitude,
+                lon: longitude,
+                dist: distance
+            };
+
+            // Send POST request to the API
+            fetch('https://whatsoverhead-772908953539.us-central1.run.app/nearest_plane', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // If response is not ok, try to parse the error detail
+                    return response.json().then(errData => {
+                        throw new Error(errData.detail || 'Unknown error occurred.');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Display the "message" field from the response
+                if (data.message) {
+                    displayMessage(data.message, false);
+                } else {
+                    displayMessage('No message field found in the response.', true);
+                }
+            })
+            .catch(error => {
+                // Display the "detail" field if available, else display the error message
+                if (error.message) {
+                    displayMessage(error.message, true);
+                } else {
+                    displayMessage('An unknown error occurred.', true);
+                }
+            });
+        }
+
+        // Error callback for geolocation
+        function errorCallback(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    displayMessage('User denied the request for Geolocation.', true);
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    displayMessage('Location information is unavailable.', true);
+                    break;
+                case error.TIMEOUT:
+                    displayMessage('The request to get user location timed out.', true);
+                    break;
+                case error.UNKNOWN_ERROR:
+                default:
+                    displayMessage('An unknown error occurred while fetching location.', true);
+                    break;
+            }
+        }
+    </script>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"8d6b946f19ba69cf","version":"2024.10.3","r":1,"token":"dbcffe8178c445d986c15d111d2e445a","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
+</body>
+</html>
