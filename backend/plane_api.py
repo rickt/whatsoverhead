@@ -30,6 +30,7 @@ class AircraftRequest(BaseModel):
 class AircraftResponse(BaseModel):
     flight: str
     desc: str
+    alt_baro: Optional[str] = None
     alt_geom: Optional[int] = None  # made optional
     gs: Optional[int] = None         # made optional
     track: Optional[int] = None      # made optional
@@ -92,12 +93,15 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
     min_distance = float('inf')
 
     for aircraft in aircraft_list:
-        # get the geometric altitude and ground speed
+        # get the geometric & barometric altitude and ground speed
         alt_geom = aircraft.get('alt_geom')
+        alt_baro = aircraft.get('alt_baro')
         gs = aircraft.get('gs')
 
         # exclude aircraft on the ground or with speed 0 or null
-        if alt_geom is None or alt_geom <= 0:
+        if alt_baro == "ground":
+            continue
+        if alt_geom is None or alt_geom <= 155:
             continue  # skip aircraft on the ground
         if gs is None or gs == 0:
             continue  # skip aircraft with speed 0 or null
@@ -130,6 +134,7 @@ def nearest_plane(request: AircraftRequest):
         return AircraftResponse(
             flight="n/a",
             desc=message,
+            alt_baro=None,
             alt_geom=None,
             gs=None,
             track=None,
@@ -149,6 +154,7 @@ def nearest_plane(request: AircraftRequest):
         return AircraftResponse(
             flight="n/a",
             desc=message,
+            alt_baro=None,
             alt_geom=None,
             gs=None,
             track=None,
@@ -159,10 +165,11 @@ def nearest_plane(request: AircraftRequest):
 
     # extract necessary information from the nearest aircraft
     flight = nearest_aircraft.get('flight', 'n/a').strip()
-    desc = nearest_aircraft.get('desc', 'unknown aircraft')
-    alt_geom = nearest_aircraft.get('alt_geom')  # optional[int]
-    gs = nearest_aircraft.get('gs')              # optional[int]
-    track = nearest_aircraft.get('track')        # optional[int]
+    desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
+    alt_baro = nearest_aircraft.get('alt_baro')
+    alt_geom = nearest_aircraft.get('alt_geom')
+    gs = nearest_aircraft.get('gs')
+    track = nearest_aircraft.get('track')
 
     year = nearest_aircraft.get('year')
     ownop = nearest_aircraft.get('ownOp')
@@ -197,7 +204,7 @@ def nearest_plane(request: AircraftRequest):
 
     message_parts.append(f"at bearing {bearing}º,")
 
-    if alt_geom is not None:
+    if alt_geom is not None and alt_baro != "ground":
         message_parts.append(f"{distance_mi} miles away at {alt_geom}ft.")
     else:
         message_parts.append(f"{distance_mi} miles away.")
@@ -217,6 +224,7 @@ def nearest_plane(request: AircraftRequest):
         flight=flight,
         desc=desc,
         alt_geom=alt_geom,
+        alt_baro=alt_baro,
         gs=gs,
         track=track,
         year=year,
