@@ -1,16 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-	  <link rel="icon" href="whatsoverhead.ico" type="image/x-icon">
-    <title>What's Overhead?</title>
+    <title>Nearest Aircraft Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Ensures proper scaling on mobile -->
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 40px;
+            margin: 20px;
             background-color: #f4f4f4;
             text-align: center;
+            padding: 10px;
         }
         #findPlaneBtn {
             padding: 15px 25px;
@@ -20,6 +20,9 @@
             color: white;
             border: none;
             border-radius: 5px;
+            width: 100%;
+            max-width: 300px;
+            box-sizing: border-box;
         }
         #findPlaneBtn:hover {
             background-color: #0056b3;
@@ -35,6 +38,7 @@
             margin-left: auto;
             margin-right: auto;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            word-wrap: break-word;
         }
         .error {
             color: red;
@@ -42,14 +46,24 @@
         .success {
             color: green;
         }
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            body {
+                margin: 10px;
+            }
+            #findPlaneBtn {
+                font-size: 14px;
+                padding: 12px 20px;
+            }
+            #result {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <h1>What aircraft is overhead?</h1>
-	 <p>
-	 Please allow location access to this page! 
-	 </p>
+    <h1>Find the Nearest Aircraft</h1>
     <button id="findPlaneBtn">Find Nearest Aircraft</button>
 
     <div id="result"></div>
@@ -91,17 +105,20 @@
         function successCallback(position) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
-            const distance = 2; // in kilometers
+            const distance = 5; // in kilometers
 
-            // Prepare the payload
+            // Prepare the JSON payload
             const payload = {
                 lat: latitude,
                 lon: longitude,
                 dist: distance
             };
 
+            // Define the API URL
+            const url = 'https://whatsoverhead-772908953539.us-central1.run.app/nearest_plane';
+
             // Send POST request to the API
-            fetch('https://whatsoverhead-772908953539.us-central1.run.app/nearest_plane', {
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -155,6 +172,5 @@
         }
     </script>
 
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"8d6b946f19ba69cf","version":"2024.10.3","r":1,"token":"dbcffe8178c445d986c15d111d2e445a","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
 </body>
 </html>
