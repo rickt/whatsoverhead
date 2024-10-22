@@ -1,6 +1,6 @@
 # plane_api.py
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware  # import cors middleware
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -22,6 +22,10 @@ class AircraftRequest(BaseModel):
     lat: float = Field(..., description="latitude of the location.")
     lon: float = Field(..., description="longitude of the location.")
     dist: float = Field(5.0, description="search radius in kilometers (default: 5 km).")
+    format: Optional[str] = Field(
+        "json",
+        description="response format: 'json' or 'text'. defaults to 'json'."
+    )
 
 class AircraftResponse(BaseModel):
     flight: str
@@ -41,7 +45,7 @@ def health_check():
 
 def get_aircraft_data(lat: float, lon: float, dist: float):
     # set the external ads-b api url
-    url = f"https://opendata.adsb.fi/api/v2/lat/{lat}/lon/{lon}/dist/{dist}"
+    url = f"https://adsb.rickt.dev/adsb.fi/v2/lat/{lat}/lon/{lon}/dist/{dist}"
 
     try:
         # make a get request to the external ads-b api
@@ -112,7 +116,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
 
     return nearest, min_distance
 
-@app.post("/nearest_plane", response_model=AircraftResponse)
+@app.post("/nearest_plane")
 def nearest_plane(request: AircraftRequest):
     # get the aircraft data from the external ads-b api
     data = get_aircraft_data(request.lat, request.lon, request.dist)
@@ -120,15 +124,18 @@ def nearest_plane(request: AircraftRequest):
 
     if not aircraft_list:
         # return a 200 response with a message if no aircraft are found
+        message = "no aircraft found within the specified radius."
+        if request.format.lower() == "text":
+            return Response(content=message, media_type="text/plain")
         return AircraftResponse(
             flight="n/a",
-            desc="no aircraft found within the specified radius.",
+            desc=message,
             alt_geom=None,
             gs=None,
             track=None,
             distance_mi=0.0,
             bearing=0,
-            message="no aircraft found within the specified radius."
+            message=message
         )
 
     # find the nearest aircraft with valid altitude and speed
@@ -136,15 +143,18 @@ def nearest_plane(request: AircraftRequest):
 
     if not nearest_aircraft:
         # return a 200 response with a message if no valid aircraft are found
+        message = "no aircraft found within the specified radius."
+        if request.format.lower() == "text":
+            return Response(content=message, media_type="text/plain")
         return AircraftResponse(
             flight="n/a",
-            desc="no aircraft found within the specified radius.",
+            desc=message,
             alt_geom=None,
             gs=None,
             track=None,
             distance_mi=0.0,
             bearing=0,
-            message="no aircraft found within the specified radius."
+            message=message
         )
 
     # extract necessary information from the nearest aircraft
@@ -155,7 +165,7 @@ def nearest_plane(request: AircraftRequest):
     track = nearest_aircraft.get('track')        # optional[int]
 
     year = nearest_aircraft.get('year')
-    ownop = nearest_aircraft.get('ownop')
+    ownop = nearest_aircraft.get('ownOp')
 
     aircraft_lat = nearest_aircraft.get('lat')
     aircraft_lon = nearest_aircraft.get('lon')
@@ -185,21 +195,24 @@ def nearest_plane(request: AircraftRequest):
     if ownop:
         message_parts.append(f"operated by {ownop}")
 
+    message_parts.append(f"at bearing {bearing}º,")
+
     if alt_geom is not None:
         message_parts.append(f"{distance_mi} miles away at {alt_geom}ft.")
     else:
         message_parts.append(f"{distance_mi} miles away.")
 
-    message_parts.append(f"bearing {bearing}º.")
-
     if gs is not None:
-        message_parts.append(f"speed {gs}kts.")
+        message_parts.append(f"Speed {gs} kts,")
     if track is not None:
-        message_parts.append(f"heading {track}º")
+        message_parts.append(f"Heading {track}º.")
 
     message = ' '.join(message_parts)
 
-    # return the aircraft response
+    # return the response based on the requested format
+    if request.format.lower() == "text":
+        return Response(content=message + "\n", media_type="text/plain")
+
     return AircraftResponse(
         flight=flight,
         desc=desc,
