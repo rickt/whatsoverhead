@@ -4,14 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <title>What's Overhead?</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- ensures proper scaling on mobile -->
     <link rel="icon" href="whatsoverhead.ico" type="image/x-icon">
     <style>
+        .top-align-input {
+            padding: 0;
+            line-height: 30px;
+            box-sizing: border-box;
+        }
+
+        .footer {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
             background-color: #f4f4f4;
-            text-align: center;
             padding: 10px;
         }
 
@@ -23,7 +33,6 @@
             color: white;
             border: none;
             border-radius: 5px;
-            width: 100%;
             max-width: 300px;
             box-sizing: border-box;
         }
@@ -54,12 +63,8 @@
             color: green;
         }
 
-        /* responsive adjustments */
+        /* Responsive adjustments */
         @media (max-width: 600px) {
-            body {
-                margin: 10px;
-            }
-
             #findPlaneBtn {
                 font-size: 14px;
                 padding: 12px 20px;
@@ -72,20 +77,33 @@
     </style>
 </head>
 
-<body>
+<body class="d-flex flex-column min-vh-100">
 
-    <h1>What aircraft is overhead?</h1>
-    <p>You must grant Location Access to this page for the aircraft finder to work!</p>
-    <button id="findPlaneBtn">Find Nearest Aircraft</button>
+    <div class="container text-center mt-5">
+        <h1>What aircraft is overhead?</h1>
+        <p>You must grant Location Access to this page for the aircraft finder to work!</p>
+        <button id="findPlaneBtn" class="mx-auto d-block">Find Nearest Aircraft</button>
 
-    <div id="result"></div>
+        <div id="result" class="mx-auto d-block"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 text-center">
+        <div class="container">
+            <p class="mb-0">2024 by <a href="https://rickt.dev/" class="text-body">rickt</a></p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
 
     <script>
         // select the button and result div
         const findPlaneBtn = document.getElementById('findPlaneBtn');
         const resultDiv = document.getElementById('result');
 
-        // func to display messages
+        // function to display messages
         function displayMessage(message, isError = false) {
             resultDiv.innerHTML = '';
             const p = document.createElement('p');
@@ -94,7 +112,7 @@
             resultDiv.appendChild(p);
         }
 
-        // func to handle the button click
+        // function to handle the button click
         findPlaneBtn.addEventListener('click', () => {
             // clear previous results
             displayMessage('Requesting location...', false);
@@ -119,7 +137,7 @@
             const longitude = position.coords.longitude;
             const distance = 5; // in kilometers
 
-            // construct query params
+            // construct the query parameters with format: "text"
             const params = new URLSearchParams({
                 lat: latitude,
                 lon: longitude,
@@ -127,9 +145,10 @@
                 format: "text" // specify the response format as text
             });
 
+            // define the API URL with query parameters
             const url = `https://api.whatsoverhead.rickt.dev/nearest_plane?${params.toString()}`;
 
-            // send it
+            // send GET request to the API
             fetch(url)
                 .then(response => {
                     if (!response.ok) {
@@ -138,11 +157,11 @@
                             throw new Error(errText || 'unknown error occurred.');
                         });
                     }
-                    // good response
+                    // if response is ok, read it as text
                     return response.text();
                 })
                 .then(data => {
-                    // display 
+                    // display the received text message
                     if (data) {
                         displayMessage(data, false);
                     } else {
@@ -150,7 +169,7 @@
                     }
                 })
                 .catch(error => {
-                    // display error message
+                    // display the error message
                     if (error.message) {
                         displayMessage(error.message, true);
                     } else {
@@ -178,7 +197,6 @@
             }
         }
     </script>
-
 </body>
 
 </html>
