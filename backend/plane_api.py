@@ -9,6 +9,7 @@ from math import radians, cos, sin, asin, sqrt, atan2, degrees
 import os
 from dotenv import load_dotenv
 from datetime import datetime
+from google.cloud import logging as gcp_logging  # import gcp logging
 
 #
 # env
@@ -18,9 +19,10 @@ ADSB_API = os.getenv("ADSB_API")
 APP_NAME = os.getenv("APP_NAME")
 APP_VERSION = os.getenv("APP_VERSION")
 DISTANCE = os.getenv("DISTANCE")
+GCP_LOG = os.getenv("GCP_LOG")
 
 #
-# app / CORS (TODO: Fix)
+# app / cors (todo: fix)
 #
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 allowed_origins = [
@@ -33,6 +35,12 @@ app.add_middleware(
     allow_methods=["GET"], 
     allow_headers=["*"], 
 )
+
+#
+# gcp logging client
+#
+logging_client = gcp_logging.Client()
+logger = logging_client.logger(GCP_LOG) 
 
 #
 # classes
@@ -56,7 +64,7 @@ class AircraftResponse(BaseModel):
     track: Optional[int] = None      # made optional
     year: Optional[int] = None
     ownop: Optional[str] = None
-    distance_mi: float
+    distance_km: float
     bearing: int
     message: Optional[str] = None
 
@@ -76,6 +84,17 @@ def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> int
     initial_bearing_rad = atan2(x, y)
     initial_bearing_deg = (degrees(initial_bearing_rad) + 360) % 360
     return int(round(initial_bearing_deg))
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    # calculate the distance between two lat/lon points using the haversine formula
+    r_km = 6371.0  # earth's radius in kilometers
+    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
+    dlon = lon2_rad - lon1_rad 
+    dlat = lat2_rad - lat1_rad 
+    a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    distance_km = r_km * c
+    return distance_km
 
 def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: float):
     # find the nearest aircraft that is airborne with valid speed
@@ -118,7 +137,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
             # skip aircraft with speed 0 or null
             continue  
 
-        # aircraft is good. get it's lat/lon
+        # aircraft is good. get its lat/lon
         aircraft_lat = aircraft.get('lat')
         aircraft_lon = aircraft.get('lon')
         if aircraft_lat is None or aircraft_lon is None:
@@ -126,17 +145,36 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
             continue  
 
         # calculate the distance from reported user position
-        distance = haversine_distance(center_lat, center_lon, aircraft_lat, aircraft_lon)
-        if distance < min_distance:
-            min_distance = distance
+        distance_km = haversine_distance(center_lat, center_lon, aircraft_lat, aircraft_lon)
+        if distance_km < min_distance:
+            min_distance = distance_km
             nearest = aircraft
+
+    if nearest:
+        # prepare log entry
+        log_entry = {
+            "flight": nearest.get('flight', 'N/A').strip(),
+            "description": nearest.get('desc', 'unknown tis-b aircraft'),
+            "altitude_baro": nearest.get('alt_baro'),
+            "altitude_geom": nearest.get('alt_geom'),
+            "ground_speed": nearest.get('gs'),
+            "track": nearest.get('track'),
+            "year": nearest.get('year'),
+            "operator": nearest.get('ownOp'),
+            "distance_km": min_distance,
+            "bearing_deg": calculate_bearing(center_lat, center_lon, nearest.get('lat'), nearest.get('lon')),
+            "timestamp": datetime.utcnow().isoformat() + 'Z'  # iso 8601 format
+        }
+
+        # log the entry to gcp logging
+        logger.log_struct(log_entry)
 
     # return 
     return nearest, min_distance
 
 def get_aircraft_data(lat: float, lon: float, dist: float):
-    # set the external ADS-B api url
-    url = f"{ADSB_API}/lat/{lat}/lon/{lon}/dist/{DISTANCE}"
+    # set the external ads-b api url
+    url = f"{ADSB_API}/lat/{lat}/lon/{lon}/dist/{dist}"
 
     try:
         # make a get request to the external ads-b api
@@ -150,23 +188,16 @@ def get_aircraft_data(lat: float, lon: float, dist: float):
         # raise an http exception if there's an error decoding the json response
         raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
 
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    # calculate the distance between two lat/lon points using the haversine formula
-    r_mi = 3958.8
-    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
-    dlon = lon2_rad - lon1_rad 
-    dlat = lat2_rad - lat1_rad 
-    a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    distance_mi = r_mi * c
-    return distance_mi
-
 def log_message(message):
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]  # Truncate to milliseconds
-    print(f"[LOG] {now} - {message}")
+    # log the aircraft spot to gcp logging
+    log_entry = {
+        "message": message,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+    logger.log_struct(log_entry)
 
 #
-# API endpoints
+# api endpoints
 #
 
 @app.get("/health")
@@ -176,7 +207,7 @@ def health_check():
 @app.get("/nearest_plane")
 def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: Optional[str] = "text"):
     if dist is None:
-        dist = DISTANCE
+        dist = float(DISTANCE)
         
     # get the aircraft data from the external ads-b api
     data = get_aircraft_data(lat, lon, dist)
@@ -194,13 +225,13 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             alt_geom=None,
             gs=None,
             track=None,
-            distance_mi=0.0,
+            distance_km=0.0,
             bearing=0,
             message=message
         )
 
     # find the nearest aircraft with valid altitude and speed
-    nearest_aircraft, distance_mi = find_nearest_aircraft(aircraft_list, lat, lon)
+    nearest_aircraft, distance_km = find_nearest_aircraft(aircraft_list, lat, lon)
 
     if not nearest_aircraft:
         # return a 200 response with a message if no valid aircraft are found
@@ -214,14 +245,14 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             alt_geom=None,
             gs=None,
             track=None,
-            distance_mi=0.0,
+            distance_km=0.0,
             bearing=0,
             message=message
         )
 
     # extract necessary information from the nearest aircraft
     flight = nearest_aircraft.get('flight', 'N/A').strip()
-    desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
+    desc = nearest_aircraft.get('desc', 'unknown tis-b aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
     alt_geom = nearest_aircraft.get('alt_geom')
     gs = nearest_aircraft.get('gs')
@@ -234,18 +265,18 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     aircraft_lon = nearest_aircraft.get('lon')
     bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
 
-    distance_mi = round(distance_mi, 1)
+    distance_km = round(distance_km, 1)
 
-    # ensure gs and track are integers or None
+    # ensure gs and track are integers or none
     if isinstance(gs, (int, float)):
         gs = int(round(gs))
     else:
-        gs = None  # set to none instead of 'n/a'
+        gs = None  # set to none instead of 'N/A'
 
     if isinstance(track, (int, float)):
         track = int(round(track))
     else:
-        track = None  # set to none instead of 'n/a'
+        track = None  # set to none instead of 'N/A'
 
     # determine which altitude to use
     if alt_baro is not None and not isinstance(alt_baro, str):
@@ -269,9 +300,9 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     message_parts.append(f"at bearing {bearing}º,")
 
     if used_altitude is not None:
-        message_parts.append(f"{distance_mi} miles away at {used_altitude}ft,")
+        message_parts.append(f"{distance_km} kilometers away at {used_altitude}ft,")
     else:
-        message_parts.append(f"{distance_mi} miles away,")
+        message_parts.append(f"{distance_km} kilometers away,")
 
     if gs is not None:
         message_parts.append(f"speed {gs} knots,")
@@ -296,9 +327,9 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         track=track,
         year=year,
         ownop=ownop,
-        distance_mi=distance_mi,
+        distance_km=distance_km,
         bearing=bearing,
         message=message
     )
 
-# EOF
+# eof
