@@ -6,10 +6,22 @@ from pydantic import BaseModel, Field
 from typing import Optional
 import requests
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
+import os
+from dotenv import load_dotenv
 
-app = FastAPI(title="nearest aircraft api", version="2.0")
+#
+# env
+#
+load_dotenv(override=True)
+ADSB_API = os.getenv("ADSB_API")
+APP_NAME = os.getenv("APP_NAME")
+APP_VERSION = os.getenv("APP_VERSION")
+DISTANCE = os.getenv("DISTANCE")
 
-# configure cors to allow all origins
+#
+# app / CORS (TODO: Fix)
+#
+app = FastAPI(title=APP_NAME, version=APP_VERSION)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # allow all origins
@@ -17,6 +29,10 @@ app.add_middleware(
     allow_methods=["*"],  # allow all http methods
     allow_headers=["*"],  # allow all headers
 )
+
+#
+# classes
+#
 
 class AircraftRequest(BaseModel):
     lat: float = Field(..., description="latitude of the location.")
@@ -40,36 +56,9 @@ class AircraftResponse(BaseModel):
     bearing: int
     message: Optional[str] = None
 
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
-
-def get_aircraft_data(lat: float, lon: float, dist: float):
-    # set the external ads-b api url
-    url = f"https://adsb.rickt.dev/adsb.fi/v2/lat/{lat}/lon/{lon}/dist/{dist}"
-
-    try:
-        # make a get request to the external ads-b api
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        # raise an http exception if there's an error with the request
-        raise HTTPException(status_code=502, detail=f"error fetching data from ads-b api: {e}")
-    except ValueError:
-        # raise an http exception if there's an error decoding the json response
-        raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
-
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    # calculate the distance between two lat/lon points using the haversine formula
-    r_mi = 3958.8
-    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
-    dlon = lon2_rad - lon1_rad 
-    dlat = lat2_rad - lat1_rad 
-    a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    distance_mi = r_mi * c
-    return distance_mi
+# 
+# funcs
+#
 
 def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
     # calculate the bearing between two lat/lon points
@@ -98,38 +87,97 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         alt_baro = aircraft.get('alt_baro')
         gs = aircraft.get('gs')
 
-        # exclude aircraft on the ground or with speed 0 or null
-        if alt_baro == "ground":
+        # exclude aircraft on the ground
+        if isinstance(alt_baro, str) and alt_baro.lower() == "ground":
             continue
-        if alt_geom is None or alt_geom <= 155:
-            continue  # skip aircraft on the ground
+        # determine aircraft's altitude by various means
+        if alt_baro is not None:
+            # barometric altitude
+            try:
+                altitude = float(alt_baro)
+            except (ValueError, TypeError):
+                continue
+        elif alt_geom is not None:
+            # wgs84 altitude
+            try:
+                altitude = float(alt_geom)
+            except (ValueError, TypeError):
+                continue
+        else:
+            # can't find good altitude for this aircraft, skip it
+            continue
+        # skip if altitude < 155ft
+        if altitude <= 155:
+            # skip aircraft with altitude <= 155ft
+            continue 
         if gs is None or gs == 0:
-            continue  # skip aircraft with speed 0 or null
+            # skip aircraft with speed 0 or null
+            continue  
 
-        # get the latitude and longitude of the aircraft
+        # aircraft is good. get it's lat/lon
         aircraft_lat = aircraft.get('lat')
         aircraft_lon = aircraft.get('lon')
         if aircraft_lat is None or aircraft_lon is None:
-            continue  # skip if lat or lon is missing
+            # skip if lat or lon is missing
+            continue  
 
-        # calculate the distance from the center point
+        # calculate the distance from reported user position
         distance = haversine_distance(center_lat, center_lon, aircraft_lat, aircraft_lon)
         if distance < min_distance:
             min_distance = distance
             nearest = aircraft
 
+    # return 
     return nearest, min_distance
 
-@app.post("/nearest_plane")
-def nearest_plane(request: AircraftRequest):
+def get_aircraft_data(lat: float, lon: float, dist: float):
+    # set the external ADS-B api url
+    url = f"{ADSB_API}/lat/{lat}/lon/{lon}/dist/{DISTANCE}"
+
+    try:
+        # make a get request to the external ads-b api
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        # raise an http exception if there's an error with the request
+        raise HTTPException(status_code=502, detail=f"error fetching data from ads-b api: {e}")
+    except ValueError:
+        # raise an http exception if there's an error decoding the json response
+        raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    # calculate the distance between two lat/lon points using the haversine formula
+    r_mi = 3958.8
+    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
+    dlon = lon2_rad - lon1_rad 
+    dlat = lat2_rad - lat1_rad 
+    a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    distance_mi = r_mi * c
+    return distance_mi
+
+#
+# API endpoints
+#
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+@app.get("/nearest_plane")
+def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: Optional[str] = "text"):
+    if dist is None:
+        dist = DISTANCE
+        
     # get the aircraft data from the external ads-b api
-    data = get_aircraft_data(request.lat, request.lon, request.dist)
+    data = get_aircraft_data(lat, lon, dist)
     aircraft_list = data.get('aircraft', [])
 
     if not aircraft_list:
         # return a 200 response with a message if no aircraft are found
         message = "no aircraft found within the specified radius."
-        if request.format.lower() == "text":
+        if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
             flight="n/a",
@@ -144,12 +192,12 @@ def nearest_plane(request: AircraftRequest):
         )
 
     # find the nearest aircraft with valid altitude and speed
-    nearest_aircraft, distance_mi = find_nearest_aircraft(aircraft_list, request.lat, request.lon)
+    nearest_aircraft, distance_mi = find_nearest_aircraft(aircraft_list, lat, lon)
 
     if not nearest_aircraft:
         # return a 200 response with a message if no valid aircraft are found
         message = "no aircraft found within the specified radius."
-        if request.format.lower() == "text":
+        if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
             flight="n/a",
@@ -176,7 +224,7 @@ def nearest_plane(request: AircraftRequest):
 
     aircraft_lat = nearest_aircraft.get('lat')
     aircraft_lon = nearest_aircraft.get('lon')
-    bearing = calculate_bearing(request.lat, request.lon, aircraft_lat, aircraft_lon)
+    bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
 
     distance_mi = round(distance_mi, 2)
 
@@ -191,6 +239,14 @@ def nearest_plane(request: AircraftRequest):
     else:
         track = None  # set to none instead of 'n/a'
 
+    # determine which altitude to use
+    if alt_baro is not None and not isinstance(alt_baro, str):
+        used_altitude = alt_baro
+    elif alt_geom is not None:
+        used_altitude = alt_geom
+    else:
+        used_altitude = None
+
     # construct the message
     message_parts = [f"{flight} is a"]
 
@@ -204,27 +260,27 @@ def nearest_plane(request: AircraftRequest):
 
     message_parts.append(f"at bearing {bearing}º,")
 
-    if alt_geom is not None and alt_baro != "ground":
-        message_parts.append(f"{distance_mi} miles away at {alt_geom}ft.")
+    if used_altitude is not None:
+        message_parts.append(f"{distance_mi} miles away at {used_altitude}ft.")
     else:
         message_parts.append(f"{distance_mi} miles away.")
 
     if gs is not None:
         message_parts.append(f"Speed {gs} kts,")
     if track is not None:
-        message_parts.append(f"Heading {track}º.")
+        message_parts.append(f"ground track {track}º.")
 
     message = ' '.join(message_parts)
 
     # return the response based on the requested format
-    if request.format.lower() == "text":
+    if format.lower() == "text":
         return Response(content=message + "\n", media_type="text/plain")
 
     return AircraftResponse(
         flight=flight,
         desc=desc,
-        alt_geom=alt_geom,
         alt_baro=alt_baro,
+        alt_geom=alt_geom,
         gs=gs,
         track=track,
         year=year,
@@ -233,3 +289,5 @@ def nearest_plane(request: AircraftRequest):
         bearing=bearing,
         message=message
     )
+
+# EOF
