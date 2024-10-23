@@ -1,7 +1,7 @@
 # plane_api.py
 
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.middleware.cors import CORSMiddleware  # import cors middleware
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
 import requests
@@ -9,11 +9,12 @@ from math import radians, cos, sin, asin, sqrt, atan2, degrees
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-from google.cloud import logging as gcp_logging  # import gcp logging
+from google.cloud import logging as gcp_logging
 
 #
 # env
 #
+
 load_dotenv(override=True)
 ADSB_API = os.getenv("ADSB_API")
 APP_NAME = os.getenv("APP_NAME")
@@ -23,6 +24,7 @@ DISTANCE = os.getenv("DISTANCE")
 #
 # app / cors (todo: fix)
 #
+
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 allowed_origins = [
     "https://whatsoverhead.rickt.dev",
@@ -35,7 +37,9 @@ app.add_middleware(
     allow_headers=["*"], 
 )
 
-# initialize the google cloud logging client
+#
+# gcp logging client
+#
 logging_client = gcp_logging.Client()
 logger = logging_client.logger("aircraft_spots")  # name your log as desired
 
@@ -91,17 +95,6 @@ def calculate_relative_speed(gs: float, aircraft_track: float, user_to_aircraft_
     # calculate the relative speed
     relative_speed = gs * cos(radians(angle_diff))
     return relative_speed  # positive: approaching, negative: moving away
-
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    # calculate the distance between two lat/lon points using the haversine formula
-    r_km = 6371.0  # earth's radius in kilometers
-    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
-    dlon = lon2_rad - lon1_rad 
-    dlat = lat2_rad - lat1_rad 
-    a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    distance_km = r_km * c
-    return distance_km
 
 def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: float):
     # find the nearest aircraft that is airborne with valid speed
@@ -195,14 +188,16 @@ def get_aircraft_data(lat: float, lon: float, dist: float):
         # raise an http exception if there's an error decoding the json response
         raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
 
-def log_message(message, relative_speed_knots: Optional[float] = None):
-    # log the aircraft spot to gcp logging
-    log_entry = {
-        "message": message,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "relative_speed_knots": relative_speed_knots
-    }
-    logger.log_struct(log_entry)
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    # calculate the distance between two lat/lon points using the haversine formula
+    r_km = 6371.0  # earth's radius in kilometers
+    lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
+    dlon = lon2_rad - lon1_rad 
+    dlat = lat2_rad - lat1_rad 
+    a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    distance_km = r_km * c
+    return distance_km
 
 #
 # api endpoints
@@ -349,9 +344,6 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     if format.lower() == "text":
         return Response(content=message + "\n", media_type="text/plain")
 
-    # log the aircraft spot
-    log_message(f"{message}", relative_speed_knots)
-
     return AircraftResponse(
         flight=flight,
         desc=desc,
@@ -367,4 +359,4 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         message=message
     )
 
-# eof
+# EOF
