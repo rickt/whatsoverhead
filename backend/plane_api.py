@@ -8,6 +8,7 @@ import requests
 from math import radians, cos, sin, asin, sqrt, atan2, degrees
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 #
 # env
@@ -160,6 +161,10 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     distance_mi = r_mi * c
     return distance_mi
 
+def log_message(message):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]  # Truncate to milliseconds
+    print(f"[LOG] {now} - {message}")
+
 #
 # API endpoints
 #
@@ -278,6 +283,9 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     # return the response based on the requested format
     if format.lower() == "text":
         return Response(content=message + "\n", media_type="text/plain")
+
+    # log the aircraft spot
+    log_message(f"{message}")
 
     return AircraftResponse(
         flight=flight,
