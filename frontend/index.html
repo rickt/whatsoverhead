@@ -3,11 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>What's Overhead?</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- ensures proper scaling on mobile -->
-    <link rel="icon" href="whatsoverhead.ico" type="image/x-icon">
     <style>
         .top-align-input {
             padding: 0;
@@ -15,14 +14,13 @@
             box-sizing: border-box;
         }
 
-        .footer {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
-            padding: 10px;
+        }
+
+        .footer {
+            background-color: rgba(0, 0, 0, 0.05);
         }
 
         #findPlaneBtn {
@@ -34,7 +32,9 @@
             border: none;
             border-radius: 5px;
             max-width: 300px;
+            width: 100%;
             box-sizing: border-box;
+            transition: background-color 0.3s;
         }
 
         #findPlaneBtn:hover {
@@ -49,8 +49,7 @@
             border-radius: 5px;
             min-height: 50px;
             max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
+            width: 100%;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             word-wrap: break-word;
         }
@@ -75,16 +74,28 @@
             }
         }
     </style>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 
 <body class="d-flex flex-column min-vh-100">
 
-    <div class="container text-center mt-5">
-        <h1>What aircraft is overhead?</h1>
-        <p>You must grant Location Access to this page for the aircraft finder to work!</p>
-        <button id="findPlaneBtn" class="mx-auto d-block">Find Nearest Aircraft</button>
-
-        <div id="result" class="mx-auto d-block"></div>
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8 col-sm-10 text-center">
+                <h1 class="mb-4">What aircraft is overhead?</h1>
+                <p class="mb-4">You must grant Location Access to this page for the aircraft finder to work!</p>
+                <button id="findPlaneBtn" class="btn btn-primary">Find Nearest Aircraft</button>
+                <div id="result" class="mt-4">
+                    <!-- Loading Spinner -->
+                    <div id="spinner" class="d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Requesting location...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -98,32 +109,48 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
 
+    <!-- Custom JS -->
     <script>
-        // select the button and result div
+        // Select the button and result div
         const findPlaneBtn = document.getElementById('findPlaneBtn');
         const resultDiv = document.getElementById('result');
+        const spinner = document.getElementById('spinner');
 
-        // function to display messages
+        // Function to display messages
         function displayMessage(message, isError = false) {
-            resultDiv.innerHTML = '';
+            spinner.classList.add('d-none'); // Hide spinner
+            resultDiv.innerHTML = ''; // Clear previous content
+
             const p = document.createElement('p');
             p.textContent = message;
             p.className = isError ? 'error' : 'success';
             resultDiv.appendChild(p);
         }
 
-        // function to handle the button click
-        findPlaneBtn.addEventListener('click', () => {
-            // clear previous results
-            displayMessage('Requesting location...', false);
+        // Function to show loading spinner
+        function showLoading(message = 'Requesting location...') {
+            resultDiv.innerHTML = `
+                <div class="d-flex flex-column align-items-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">${message}</p>
+                </div>
+            `;
+        }
 
-            // check if geolocation api is supported
+        // Function to handle the button click
+        findPlaneBtn.addEventListener('click', () => {
+            // Show loading spinner
+            showLoading();
+
+            // Check if Geolocation API is supported
             if (!navigator.geolocation) {
                 displayMessage('Geolocation is not supported by your browser.', true);
                 return;
             }
 
-            // request the user's location
+            // Request the user's location
             navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
                 enableHighAccuracy: true,
                 timeout: 10000,
@@ -131,13 +158,13 @@
             });
         });
 
-        // success callback for geolocation
+        // Success callback for geolocation
         function successCallback(position) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             const distance = 5; // in kilometers
 
-            // construct the query parameters with format: "text"
+            // Construct query params
             const params = new URLSearchParams({
                 lat: latitude,
                 lon: longitude,
@@ -145,54 +172,54 @@
                 format: "text" // specify the response format as text
             });
 
-            // define the API URL with query parameters
+            // Define the API URL with query parameters
             const url = `https://api.whatsoverhead.rickt.dev/nearest_plane?${params.toString()}`;
 
-            // send GET request to the API
+            // Send GET request to the API
             fetch(url)
                 .then(response => {
                     if (!response.ok) {
-                        // if response is not ok, attempt to read it as text
+                        // If response is not ok, attempt to read it as text
                         return response.text().then(errText => {
-                            throw new Error(errText || 'unknown error occurred.');
+                            throw new Error(errText || 'Unknown error occurred.');
                         });
                     }
-                    // if response is ok, read it as text
+                    // Good response
                     return response.text();
                 })
                 .then(data => {
-                    // display the received text message
+                    // Display the received text message
                     if (data) {
                         displayMessage(data, false);
                     } else {
-                        displayMessage('no data received from the api.', true);
+                        displayMessage('No data received from the API.', true);
                     }
                 })
                 .catch(error => {
-                    // display the error message
+                    // Display the error message
                     if (error.message) {
                         displayMessage(error.message, true);
                     } else {
-                        displayMessage('an unknown error occurred.', true);
+                        displayMessage('An unknown error occurred.', true);
                     }
                 });
         }
 
-        // error callback for geolocation
+        // Error callback for geolocation
         function errorCallback(error) {
             switch (error.code) {
                 case error.PERMISSION_DENIED:
-                    displayMessage('user denied the request for geolocation.', true);
+                    displayMessage('User denied the request for Geolocation.', true);
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    displayMessage('location information is unavailable.', true);
+                    displayMessage('Location information is unavailable.', true);
                     break;
                 case error.TIMEOUT:
-                    displayMessage('the request to get user location timed out.', true);
+                    displayMessage('The request to get user location timed out.', true);
                     break;
                 case error.UNKNOWN_ERROR:
                 default:
-                    displayMessage('an unknown error occurred while fetching location.', true);
+                    displayMessage('An unknown error occurred while fetching location.', true);
                     break;
             }
         }
