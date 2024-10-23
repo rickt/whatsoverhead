@@ -183,7 +183,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
-            flight="n/a",
+            flight="N/A",
             desc=message,
             alt_baro=None,
             alt_geom=None,
@@ -203,7 +203,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
-            flight="n/a",
+            flight="N/A",
             desc=message,
             alt_baro=None,
             alt_geom=None,
@@ -215,7 +215,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         )
 
     # extract necessary information from the nearest aircraft
-    flight = nearest_aircraft.get('flight', 'n/a').strip()
+    flight = nearest_aircraft.get('flight', 'N/A').strip()
     desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
     alt_geom = nearest_aircraft.get('alt_geom')
@@ -229,7 +229,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     aircraft_lon = nearest_aircraft.get('lon')
     bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
 
-    distance_mi = round(distance_mi, 2)
+    distance_mi = round(distance_mi, 1)
 
     # ensure gs and track are integers or None
     if isinstance(gs, (int, float)):
