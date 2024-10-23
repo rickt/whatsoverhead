@@ -161,7 +161,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         # prepare log entry
         log_entry = {
             "flight": nearest.get('flight', 'n/a').strip(),
-            "description": nearest.get('desc', 'unknown tis-b aircraft'),
+            "description": nearest.get('desc', 'Unknown TIS-B aircraft'),
             "altitude_baro": nearest.get('alt_baro'),
             "altitude_geom": nearest.get('alt_geom'),
             "ground_speed": nearest.get('gs'),
@@ -170,7 +170,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
             "operator": nearest.get('ownOp'),
             "distance_km": min_distance,
             "bearing_deg": calculate_bearing(center_lat, center_lon, nearest.get('lat'), nearest.get('lon')),
-            "timestamp": datetime.utcnow().isoformat() + 'Z'  # iso 8601 format
+            "timestamp": datetime.utcnow().isoformat() + 'Z' 
         }
 
         # log the entry to gcp logging
@@ -264,7 +264,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     # extract necessary information from the nearest aircraft
     flight = nearest_aircraft.get('flight', 'n/a').strip()
-    desc = nearest_aircraft.get('desc', 'unknown tis-b aircraft')
+    desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
     alt_geom = nearest_aircraft.get('alt_geom')
     gs = nearest_aircraft.get('gs')
