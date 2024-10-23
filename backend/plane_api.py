@@ -269,7 +269,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         message_parts.append(f"{distance_mi} miles away.")
 
     if gs is not None:
-        message_parts.append(f"Speed {gs} kts,")
+        message_parts.append(f"Speed {gs} knots,")
     if track is not None:
         message_parts.append(f"ground track {track}º.")
 
