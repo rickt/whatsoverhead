@@ -22,12 +22,15 @@ DISTANCE = os.getenv("DISTANCE")
 # app / CORS (TODO: Fix)
 #
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
+allowed_origins = [
+    "https://whatsoverhead.rickt.dev",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all origins
-    allow_credentials=False,  # do not allow credentials
-    allow_methods=["*"],  # allow all http methods
-    allow_headers=["*"],  # allow all headers
+    allow_origins=allowed_origins, 
+    allow_credentials=False, 
+    allow_methods=["GET"], 
+    allow_headers=["*"], 
 )
 
 #
