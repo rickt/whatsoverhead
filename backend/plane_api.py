@@ -160,7 +160,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
     if nearest:
         # prepare log entry
         log_entry = {
-            "flight": nearest.get('flight', 'n/a').strip(),
+            "flight": nearest.get('flight', 'N/A').strip(),
             "description": nearest.get('desc', 'Unknown TIS-B aircraft'),
             "altitude_baro": nearest.get('alt_baro'),
             "altitude_geom": nearest.get('alt_geom'),
@@ -229,7 +229,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
-            flight="n/a",
+            flight="N/A",
             desc=message,
             alt_baro=None,
             alt_geom=None,
@@ -250,7 +250,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
-            flight="n/a",
+            flight="N/A",
             desc=message,
             alt_baro=None,
             alt_geom=None,
@@ -263,7 +263,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         )
 
     # extract necessary information from the nearest aircraft
-    flight = nearest_aircraft.get('flight', 'n/a').strip()
+    flight = nearest_aircraft.get('flight', 'N/A').strip()
     desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
     alt_geom = nearest_aircraft.get('alt_geom')
@@ -283,12 +283,12 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     if isinstance(gs, (int, float)):
         gs = int(round(gs))
     else:
-        gs = None  # set to none instead of 'n/a'
+        gs = None 
 
     if isinstance(track, (int, float)):
         track = int(round(track))
     else:
-        track = None  # set to none instead of 'n/a'
+        track = None  
 
     # determine which altitude to use
     if alt_baro is not None and not isinstance(alt_baro, str):
