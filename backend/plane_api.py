@@ -215,7 +215,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     if not aircraft_list:
         # return a 200 response with a message if no aircraft are found
-        message = "no aircraft found within the specified radius."
+        message = "No aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
@@ -235,7 +235,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     if not nearest_aircraft:
         # return a 200 response with a message if no valid aircraft are found
-        message = "no aircraft found within the specified radius."
+        message = "No aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
