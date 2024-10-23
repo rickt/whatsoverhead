@@ -41,7 +41,7 @@ app.add_middleware(
 # gcp logging client
 #
 logging_client = gcp_logging.Client()
-logger = logging_client.logger("aircraft_spots")  # name your log as desired
+logger = logging_client.logger("aircraft_spots")
 
 #
 # classes
