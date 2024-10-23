@@ -40,6 +40,7 @@ app.add_middleware(
 #
 # gcp logging client
 #
+
 logging_client = gcp_logging.Client()
 logger = logging_client.logger("aircraft_spots")
 
@@ -89,9 +90,15 @@ def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> int
 
 def calculate_relative_speed(gs: float, aircraft_track: float, user_to_aircraft_bearing: float) -> float:
     # calculate the relative speed at which the aircraft is approaching or moving away
-    angle_diff = aircraft_track - user_to_aircraft_bearing
+    # calculate the bearing from aircraft to user
+    aircraft_to_user_bearing = (user_to_aircraft_bearing + 180) % 360
+    
+    # calculate the angle difference between the aircraft's track and the bearing to user
+    angle_diff = aircraft_track - aircraft_to_user_bearing
+    
     # normalize the angle to be within [-180, 180]
     angle_diff = (angle_diff + 180) % 360 - 180
+    
     # calculate the relative speed
     relative_speed = gs * cos(radians(angle_diff))
     return relative_speed  # positive: approaching, negative: moving away
@@ -327,7 +334,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     # track
     if track is not None:
         message_parts.append(f"ground track {track}º,")
-    
+
     # relative speed
     if relative_speed_knots is not None:
         if relative_speed_knots > 0:
