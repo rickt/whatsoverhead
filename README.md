@@ -1,7 +1,7 @@
 # whatsoverhead
 what aircraft is overhead?
 
-[https://whatsoverhead.rickt.dev](https://whatsoverhead.rickt.dev)
+live demo: [https://whatsoverhead.rickt.dev](https://whatsoverhead.rickt.dev)
 
 [front](https://github.com/rickt/whatsoverhead/tree/main/frontend) and [backend](https://github.com/rickt/whatsoverhead/tree/main/backend) src for a simple "what aircraft is overhead" app.
 
