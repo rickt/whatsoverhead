@@ -19,7 +19,6 @@ ADSB_API = os.getenv("ADSB_API")
 APP_NAME = os.getenv("APP_NAME")
 APP_VERSION = os.getenv("APP_VERSION")
 DISTANCE = os.getenv("DISTANCE")
-GCP_LOG = os.getenv("GCP_LOG")
 
 #
 # app / cors (todo: fix)
@@ -36,11 +35,9 @@ app.add_middleware(
     allow_headers=["*"], 
 )
 
-#
-# gcp logging client
-#
+# initialize the google cloud logging client
 logging_client = gcp_logging.Client()
-logger = logging_client.logger(GCP_LOG) 
+logger = logging_client.logger("aircraft_spots")  # name your log as desired
 
 #
 # classes
@@ -59,13 +56,14 @@ class AircraftResponse(BaseModel):
     flight: str
     desc: str
     alt_baro: Optional[str] = None
-    alt_geom: Optional[int] = None  # made optional
-    gs: Optional[int] = None         # made optional
-    track: Optional[int] = None      # made optional
+    alt_geom: Optional[int] = None 
+    gs: Optional[int] = None 
+    track: Optional[int] = None 
     year: Optional[int] = None
     ownop: Optional[str] = None
     distance_km: float
     bearing: int
+    relative_speed_knots: Optional[float] = None 
     message: Optional[str] = None
 
 # 
@@ -84,6 +82,15 @@ def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> int
     initial_bearing_rad = atan2(x, y)
     initial_bearing_deg = (degrees(initial_bearing_rad) + 360) % 360
     return int(round(initial_bearing_deg))
+
+def calculate_relative_speed(gs: float, aircraft_track: float, user_to_aircraft_bearing: float) -> float:
+    # calculate the relative speed at which the aircraft is approaching or moving away
+    angle_diff = aircraft_track - user_to_aircraft_bearing
+    # normalize the angle to be within [-180, 180]
+    angle_diff = (angle_diff + 180) % 360 - 180
+    # calculate the relative speed
+    relative_speed = gs * cos(radians(angle_diff))
+    return relative_speed  # positive: approaching, negative: moving away
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # calculate the distance between two lat/lon points using the haversine formula
@@ -153,7 +160,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
     if nearest:
         # prepare log entry
         log_entry = {
-            "flight": nearest.get('flight', 'N/A').strip(),
+            "flight": nearest.get('flight', 'n/a').strip(),
             "description": nearest.get('desc', 'unknown tis-b aircraft'),
             "altitude_baro": nearest.get('alt_baro'),
             "altitude_geom": nearest.get('alt_geom'),
@@ -188,11 +195,12 @@ def get_aircraft_data(lat: float, lon: float, dist: float):
         # raise an http exception if there's an error decoding the json response
         raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
 
-def log_message(message):
+def log_message(message, relative_speed_knots: Optional[float] = None):
     # log the aircraft spot to gcp logging
     log_entry = {
         "message": message,
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "relative_speed_knots": relative_speed_knots
     }
     logger.log_struct(log_entry)
 
@@ -215,11 +223,11 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     if not aircraft_list:
         # return a 200 response with a message if no aircraft are found
-        message = "No aircraft found within the specified radius."
+        message = "no aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
-            flight="N/A",
+            flight="n/a",
             desc=message,
             alt_baro=None,
             alt_geom=None,
@@ -227,6 +235,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             track=None,
             distance_km=0.0,
             bearing=0,
+            relative_speed_knots=None,
             message=message
         )
 
@@ -235,11 +244,11 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     if not nearest_aircraft:
         # return a 200 response with a message if no valid aircraft are found
-        message = "No aircraft found within the specified radius."
+        message = "no aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
-            flight="N/A",
+            flight="n/a",
             desc=message,
             alt_baro=None,
             alt_geom=None,
@@ -247,11 +256,12 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             track=None,
             distance_km=0.0,
             bearing=0,
+            relative_speed_knots=None,
             message=message
         )
 
     # extract necessary information from the nearest aircraft
-    flight = nearest_aircraft.get('flight', 'N/A').strip()
+    flight = nearest_aircraft.get('flight', 'n/a').strip()
     desc = nearest_aircraft.get('desc', 'unknown tis-b aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
     alt_geom = nearest_aircraft.get('alt_geom')
@@ -271,12 +281,12 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     if isinstance(gs, (int, float)):
         gs = int(round(gs))
     else:
-        gs = None  # set to none instead of 'N/A'
+        gs = None  # set to none instead of 'n/a'
 
     if isinstance(track, (int, float)):
         track = int(round(track))
     else:
-        track = None  # set to none instead of 'N/A'
+        track = None  # set to none instead of 'n/a'
 
     # determine which altitude to use
     if alt_baro is not None and not isinstance(alt_baro, str):
@@ -286,29 +296,53 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     else:
         used_altitude = None
 
+    # calculate the relative speed
+    if gs is not None and track is not None:
+        relative_speed_knots = calculate_relative_speed(gs, track, bearing)
+    else:
+        relative_speed_knots = None
+
     # construct the message
     message_parts = [f"{flight} is a"]
 
+    # year
     if year:
         message_parts.append(f"{year}")
 
+    # description 
     message_parts.append(f"{desc}")
 
+    # owner/operator
     if ownop:
         message_parts.append(f"operated by {ownop}")
 
+    # bearing
     message_parts.append(f"at bearing {bearing}º,")
 
+    # altitude
     if used_altitude is not None:
         message_parts.append(f"{distance_km} kilometers away at {used_altitude}ft,")
     else:
         message_parts.append(f"{distance_km} kilometers away,")
 
+    # ground speed
     if gs is not None:
         message_parts.append(f"speed {gs} knots,")
+    
+    # track
     if track is not None:
-        message_parts.append(f"ground track {track}º.")
+        message_parts.append(f"ground track {track}º,")
+    
+    # relative speed
+    if relative_speed_knots is not None:
+        if relative_speed_knots > 0:
+            message_parts.append(f"approaching at {relative_speed_knots:.0f} knots.")
+        elif relative_speed_knots < 0:
+            message_parts.append(f"receding at {abs(relative_speed_knots):.0f} knots.")
+        else:
+            message_parts.append("maintaining distance.")
 
+    # pull the message parts together
     message = ' '.join(message_parts)
 
     # return the response based on the requested format
@@ -316,7 +350,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         return Response(content=message + "\n", media_type="text/plain")
 
     # log the aircraft spot
-    log_message(f"{message}")
+    log_message(f"{message}", relative_speed_knots)
 
     return AircraftResponse(
         flight=flight,
@@ -329,6 +363,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         ownop=ownop,
         distance_km=distance_km,
         bearing=bearing,
+        relative_speed_knots=relative_speed_knots,
         message=message
     )
 
