@@ -264,12 +264,12 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     message_parts.append(f"at bearing {bearing}º,")
 
     if used_altitude is not None:
-        message_parts.append(f"{distance_mi} miles away at {used_altitude}ft.")
+        message_parts.append(f"{distance_mi} miles away at {used_altitude}ft,")
     else:
-        message_parts.append(f"{distance_mi} miles away.")
+        message_parts.append(f"{distance_mi} miles away,")
 
     if gs is not None:
-        message_parts.append(f"Speed {gs} knots,")
+        message_parts.append(f"speed {gs} knots,")
     if track is not None:
         message_parts.append(f"ground track {track}º.")
 
