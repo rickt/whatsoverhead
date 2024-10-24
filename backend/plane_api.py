@@ -20,6 +20,7 @@ ADSB_API = os.getenv("ADSB_API")
 APP_NAME = os.getenv("APP_NAME")
 APP_VERSION = os.getenv("APP_VERSION")
 DISTANCE = os.getenv("DISTANCE")
+GCP_LOG = os.getenv("GCP_LOG")
 
 #
 # app / cors (todo: fix)
@@ -28,6 +29,7 @@ DISTANCE = os.getenv("DISTANCE")
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 allowed_origins = [
     "https://whatsoverhead.rickt.dev",
+    "https://whatsoverhead-dev.rickt.dev",
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +44,7 @@ app.add_middleware(
 #
 
 logging_client = gcp_logging.Client()
-logger = logging_client.logger("aircraft_spots")
+logger = logging_client.logger(GCP_LOG)
 
 #
 # classes
@@ -343,6 +345,15 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     # pull the message parts together
     message = ' '.join(message_parts)
+
+    # prepare log entry
+    log_entry = {
+        "message": message,
+        "severity": "DEBUG"
+    }
+    
+    # log the entry to gcp logging
+    logger.log_struct(log_entry)
 
     # return the response based on the requested format
     if format.lower() == "text":
