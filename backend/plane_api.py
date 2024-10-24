@@ -190,10 +190,10 @@ def get_aircraft_data(lat: float, lon: float, dist: float):
         return response.json()
     except requests.exceptions.RequestException as e:
         # raise an http exception if there's an error with the request
-        raise HTTPException(status_code=502, detail=f"error fetching data from ads-b api: {e}")
+        raise HTTPException(status_code=502, detail=f"Error fetching data from ads-b api: {e}")
     except ValueError:
         # raise an http exception if there's an error decoding the json response
-        raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
+        raise HTTPException(status_code=502, detail="Error decoding json response from ads-b api.")
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # calculate the distance between two lat/lon points using the haversine formula
