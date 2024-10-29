@@ -20,6 +20,7 @@ ADSB_API = os.getenv("ADSB_API")
 APP_NAME = os.getenv("APP_NAME")
 APP_VERSION = os.getenv("APP_VERSION")
 DISTANCE = os.getenv("DISTANCE")
+GCP_LOG = os.getenv("GCP_LOG")
 
 #
 # app / cors (todo: fix)
@@ -28,6 +29,7 @@ DISTANCE = os.getenv("DISTANCE")
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
 allowed_origins = [
     "https://whatsoverhead.rickt.dev",
+    "https://whatsoverhead-dev.rickt.dev",
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -42,7 +44,7 @@ app.add_middleware(
 #
 
 logging_client = gcp_logging.Client()
-logger = logging_client.logger("aircraft_spots")
+logger = logging_client.logger(GCP_LOG)
 
 #
 # classes
@@ -89,7 +91,6 @@ def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> int
     return int(round(initial_bearing_deg))
 
 def calculate_relative_speed(gs: float, aircraft_track: float, user_to_aircraft_bearing: float) -> float:
-    # calculate the relative speed at which the aircraft is approaching or moving away
     # calculate the bearing from aircraft to user
     aircraft_to_user_bearing = (user_to_aircraft_bearing + 180) % 360
     
@@ -120,6 +121,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         # exclude aircraft on the ground
         if isinstance(alt_baro, str) and alt_baro.lower() == "ground":
             continue
+
         # determine aircraft's altitude by various means
         if alt_baro is not None:
             # barometric altitude
@@ -136,9 +138,9 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         else:
             # can't find good altitude for this aircraft, skip it
             continue
-        # skip if altitude < 155ft
-        if altitude <= 155:
-            # skip aircraft with altitude <= 155ft
+
+        # skip if altitude < 100ft
+        if altitude <= 100:
             continue 
         if gs is None or gs == 0:
             # skip aircraft with speed 0 or null
@@ -184,16 +186,16 @@ def get_aircraft_data(lat: float, lon: float, dist: float):
     url = f"{ADSB_API}/lat/{lat}/lon/{lon}/dist/{dist}"
 
     try:
-        # make a get request to the external ads-b api
+        # make a request to the external ads-b api
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         # raise an http exception if there's an error with the request
-        raise HTTPException(status_code=502, detail=f"error fetching data from ads-b api: {e}")
+        raise HTTPException(status_code=502, detail=f"Error fetching data from ads-b api: {e}")
     except ValueError:
         # raise an http exception if there's an error decoding the json response
-        raise HTTPException(status_code=502, detail="error decoding json response from ads-b api.")
+        raise HTTPException(status_code=502, detail="Error decoding json response from ads-b api.")
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # calculate the distance between two lat/lon points using the haversine formula
@@ -219,13 +221,13 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     if dist is None:
         dist = float(DISTANCE)
         
-    # get the aircraft data from the external ads-b api
+    # get the aircraft data from the ads-b api
     data = get_aircraft_data(lat, lon, dist)
     aircraft_list = data.get('aircraft', [])
 
     if not aircraft_list:
         # return a 200 response with a message if no aircraft are found
-        message = "no aircraft found within the specified radius."
+        message = "No aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
@@ -246,7 +248,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     if not nearest_aircraft:
         # return a 200 response with a message if no valid aircraft are found
-        message = "no aircraft found within the specified radius."
+        message = "No aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
         return AircraftResponse(
@@ -269,14 +271,11 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     alt_geom = nearest_aircraft.get('alt_geom')
     gs = nearest_aircraft.get('gs')
     track = nearest_aircraft.get('track')
-
     year = nearest_aircraft.get('year')
     ownop = nearest_aircraft.get('ownOp')
-
     aircraft_lat = nearest_aircraft.get('lat')
     aircraft_lon = nearest_aircraft.get('lon')
     bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
-
     distance_km = round(distance_km, 1)
 
     # ensure gs and track are integers or none
@@ -346,6 +345,15 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     # pull the message parts together
     message = ' '.join(message_parts)
+
+    # prepare log entry
+    log_entry = {
+        "message": message,
+        "severity": "DEBUG"
+    }
+    
+    # log the entry to gcp logging
+    logger.log_struct(log_entry)
 
     # return the response based on the requested format
     if format.lower() == "text":

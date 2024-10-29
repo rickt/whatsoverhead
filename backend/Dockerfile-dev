@@ -1,5 +1,5 @@
 #
-# Dockerfile for whatsoverhead
+# Dockerfile for whatsoverhead-DEV
 #
 
 # use slim python image
@@ -22,7 +22,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # env & app code
-COPY .env .
+COPY .env-dev .env
 COPY plane_api.py .
 
 # port
