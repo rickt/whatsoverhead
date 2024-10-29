@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>What's Overhead?</title>
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap css -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         .top-align-input {
@@ -17,6 +17,7 @@
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
+            color: #000; 
         }
 
         .footer {
@@ -52,6 +53,7 @@
             width: 100%;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             word-wrap: break-word;
+            color: #000; 
         }
 
         .error {
@@ -62,7 +64,7 @@
             color: green;
         }
 
-        /* Responsive adjustments */
+        /* responsive */
         @media (max-width: 600px) {
             #findPlaneBtn {
                 font-size: 14px;
@@ -71,6 +73,46 @@
 
             #result {
                 padding: 15px;
+            }
+        }
+
+        /* dark mode */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #121212;
+                color: #e0e0e0;
+            }
+
+            .footer {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+            #findPlaneBtn {
+                background-color: #1E90FF;
+                color: #fff;
+            }
+
+            #findPlaneBtn:hover {
+                background-color: #1C86EE;
+            }
+
+            #result {
+                background-color: #1e1e1e;
+                border-color: #333;
+                box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+                color: #e0e0e0;
+            }
+
+            .error {
+                color: #FF6B6B;
+            }
+
+            .success {
+                color: #4CAF50;
+            }
+
+            a {
+                color: #80cbc4;
             }
         }
     </style>
@@ -83,7 +125,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-6 col-md-8 col-sm-10 text-center">
                 <h1 class="mb-4">What aircraft is overhead?</h1>
-                <p class="mb-4">You must grant Location Access to this page for the aircraft finder to work!</p>
+                <p class="mb-4">You must grant Location Access to this page for What's Overhead to work!</p>
                 <button id="findPlaneBtn" class="btn btn-primary">Find Nearest Aircraft</button>
                 <div id="result" class="mt-4">
                     <!-- Loading Spinner -->
@@ -98,28 +140,27 @@
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- footer -->
     <footer class="footer mt-auto py-3 text-center">
         <div class="container">
             <p class="mb-0">2024 by <a href="https://rickt.dev/" class="text-body">rickt</a></p>
         </div>
     </footer>
 
-    <!-- Bootstrap JS and dependencies -->
+    <!-- bootstrap js and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
 
-    <!-- Custom JS -->
     <script>
-        // Select the button and result div
+        // select the button and result div
         const findPlaneBtn = document.getElementById('findPlaneBtn');
         const resultDiv = document.getElementById('result');
         const spinner = document.getElementById('spinner');
 
-        // Function to display messages
+        // func to display messages
         function displayMessage(message, isError = false) {
-            spinner.classList.add('d-none'); // Hide spinner
-            resultDiv.innerHTML = ''; // Clear previous content
+            spinner.classList.add('d-none'); // hide spinner
+            resultDiv.innerHTML = ''; // clear previous content
 
             const p = document.createElement('p');
             p.textContent = message;
@@ -127,7 +168,7 @@
             resultDiv.appendChild(p);
         }
 
-        // Function to show loading spinner
+        // spinner func
         function showLoading(message = 'Requesting location...') {
             resultDiv.innerHTML = `
                 <div class="d-flex flex-column align-items-center">
@@ -139,18 +180,18 @@
             `;
         }
 
-        // Function to handle the button click
+        // button click handler
         findPlaneBtn.addEventListener('click', () => {
-            // Show loading spinner
+            // spinner
             showLoading();
 
-            // Check if Geolocation API is supported
+            // check if geolocation api is supported
             if (!navigator.geolocation) {
-                displayMessage('Geolocation is not supported by your browser.', true);
+                displayMessage('geolocation is not supported by your browser.', true);
                 return;
             }
 
-            // Request the user's location
+            // get user location
             navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
                 enableHighAccuracy: true,
                 timeout: 10000,
@@ -158,45 +199,53 @@
             });
         });
 
-        // Success callback for geolocation
+        // success callback for geolocation
         function successCallback(position) {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             const distance = 5; // in kilometers
 
-            // Construct query params
+            // build the query
             const params = new URLSearchParams({
                 lat: latitude,
                 lon: longitude,
                 dist: distance,
-                format: "text" // specify the response format as text
+                format: "text" 
             });
 
-            // Define the API URL with query parameters
+            // construct url
             const url = `https://api.whatsoverhead.rickt.dev/nearest_plane?${params.toString()}`;
 
-            // Send GET request to the API
+            // send it
             fetch(url)
                 .then(response => {
                     if (!response.ok) {
-                        // If response is not ok, attempt to read it as text
+                        // if not ok, get error text
                         return response.text().then(errText => {
-                            throw new Error(errText || 'Unknown error occurred.');
+                            throw new Error(errText || 'unknown error occurred.');
                         });
                     }
-                    // Good response
+                    // ok
                     return response.text();
                 })
                 .then(data => {
-                    // Display the received text message
+                    // we're good, build & send output
                     if (data) {
                         displayMessage(data, false);
+                        const mapUrl = `https://globe.adsbexchange.com/?lat=${latitude}&lon=${longitude}&zoom=12.5`;
+                        const link = document.createElement('a');
+                        link.href = mapUrl;
+                        link.textContent = 'Click HERE for aircraft map above you.';
+                        link.target = '_blank'; // open in new tab
+                        link.rel = 'noopener noreferrer';
+                        link.className = 'mt-3 d-block'; 
+                        resultDiv.appendChild(link);
                     } else {
-                        displayMessage('No data received from the API.', true);
+                        displayMessage('No data received from the api.', true);
                     }
                 })
                 .catch(error => {
-                    // Display the error message
+                    // display the error message
                     if (error.message) {
                         displayMessage(error.message, true);
                     } else {
@@ -205,17 +254,17 @@
                 });
         }
 
-        // Error callback for geolocation
+        // error callback for geolocation
         function errorCallback(error) {
             switch (error.code) {
                 case error.PERMISSION_DENIED:
-                    displayMessage('User denied the request for Geolocation.', true);
+                    displayMessage('User denied the request for geolocation.', true);
                     break;
                 case error.POSITION_UNAVAILABLE:
                     displayMessage('Location information is unavailable.', true);
                     break;
                 case error.TIMEOUT:
-                    displayMessage('The request to get user location timed out.', true);
+                    displayMessage('Request to get user location timed out.', true);
                     break;
                 case error.UNKNOWN_ERROR:
                 default:
@@ -223,7 +272,24 @@
                     break;
             }
         }
+
+        // tickle the Cloud Run instance healthcheck to pre-warm it up ready for user click
+        setTimeout(() => {
+            // send an asynchronous and silent GET to the health endpoint
+            fetch('https://api.whatsoverhead.rickt.dev/health')
+                .then(response => response.json())
+                .then(data => {
+                    // log the health status to the console
+                    console.log(`health status: ${data.status}`);
+                })
+                .catch(error => {
+                    // log the error to the console
+                    console.error('error fetching health status:', error);
+                });
+        }, 750); // 
     </script>
+
 </body>
 
 </html>
+
