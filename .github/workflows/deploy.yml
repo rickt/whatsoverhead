@@ -23,7 +23,7 @@ jobs:
         working-directory: backend
         run: echo "Switched to backend directory"
 
-      # Step 3: Load .env variables 
+      # Step 3: Load environment variables from .env
       - name: Load environment variables from .env
         working-directory: backend
         run: |
@@ -42,13 +42,13 @@ jobs:
         run: |
           gcloud auth configure-docker --quiet
 
-      # Step 6: Build the Docker image
+      # Step 6: Build Docker image
       - name: Build Docker image
         working-directory: backend
         run: |
           docker build -t gcr.io/${GCP_PROJECT_ID}/${ENDPOINT} .
 
-      # Step 7: Push the Docker image
+      # Step 7: Push Docker image
       - name: Push Docker image
         working-directory: backend
         run: |
@@ -57,7 +57,7 @@ jobs:
       # Step 8: Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
-          gcloud beta run deploy ${ENDPOINT \
+          gcloud beta run deploy ${ENDPOINT} \
             --region ${CLOUDRUN_REGION} \
             --image gcr.io/${GCP_PROJECT_ID}/${ENDPOINT} \
             --port ${PORT} \
