@@ -1,4 +1,4 @@
-name: Deploy whatsoverhead to Cloud Run
+name: Deploy whatsoverhead API to Cloud Run
 
 on:
   push:
@@ -19,14 +19,14 @@ jobs:
         uses: actions/checkout@v3
 
       # Step 2: Load environment variables from .env
-      - name: Load environment variables
+      - name: Load .env into GITHUB_ENV
         id: load_env
         working-directory: backend
         run: |
           cat .env >> $GITHUB_ENV
 
       # Step 3: Authenticate with GCP
-      - name: Authenticate to GCP
+      - name: Authenticate with GCP
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
@@ -36,13 +36,13 @@ jobs:
         run: |
           gcloud auth configure-docker --quiet
 
-      # Step 5: Build the Docker image
+      # Step 5: Docker build
       - name: Build Docker image
         working-directory: backend
         run: |
           docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} .
 
-      # Step 6: Push the Docker image
+      # Step 6: Docker push
       - name: Push Docker image
         working-directory: backend
         run: |
