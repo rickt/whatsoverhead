@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - backend/plane_api.py  # Trigger workflow only if this file is changed
 
 jobs:
   deploy:
@@ -60,4 +62,5 @@ jobs:
             --max-instances ${{ secrets.CLOUDRUN_MAXINSTANCES }} \
             --concurrency ${{ secrets.CLOUDRUN_CONCURRENCY }} \
             --service-account ${{ secrets.GCP_SERVICE_ACCOUNT }} \
+            --platform managed \
             --allow-unauthenticated
