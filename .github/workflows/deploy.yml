@@ -5,8 +5,8 @@ on:
     branches:
       - main
     paths:
-      - backend/plane_api.py  # Trigger workflow only if these files are changed
-      - backend/.env
+      - backend/plane_api.py  # Trigger if plane_api.py is changed
+      - backend/.env          # Trigger if .env is changed
 
 jobs:
   deploy:
