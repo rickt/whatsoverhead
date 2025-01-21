@@ -31,19 +31,24 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
-      # Step 5: Build the Docker image
+      # Step 5: Authenticate Docker with GCP
+      - name: Authenticate Docker
+        run: |
+          gcloud auth configure-docker --quiet
+
+      # Step 6: Build the Docker image
       - name: Build Docker image
         working-directory: backend
         run: |
           docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ENDPOINT }} .
 
-      # Step 6: Push the Docker image
+      # Step 7: Push the Docker image
       - name: Push Docker image
         working-directory: backend
         run: |
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ENDPOINT }}
 
-      # Step 7: Deploy to Cloud Run
+      # Step 8: Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
           gcloud beta run deploy ${{ secrets.ENDPOINT }} \
