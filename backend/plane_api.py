@@ -201,7 +201,7 @@ def get_ordinal_direction(bearing: int) -> str:
     # determine the ordinal direction from the bearing
     # shift the bearing by 22.5 degrees
     direction_index = int(((bearing + 22.5) % 360) // 45)
-    directions = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"]
+    directions = ["north", "northeast", "east", "southeaast", "south", "southwest", "west", "northweest"]
     return directions[direction_index]
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
