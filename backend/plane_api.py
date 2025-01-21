@@ -345,11 +345,11 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     # relative speed
     if relative_speed_knots is not None:
         if relative_speed_knots > 0:
-            message_parts.append(f"approaching at {relative_speed_knots:.0f} knots.")
+            message_parts.append(f"approaching at {relative_speed_knots:.0f} knots!")
         elif relative_speed_knots < 0:
-            message_parts.append(f"receding at {abs(relative_speed_knots):.0f} knots.")
+            message_parts.append(f"receding at {abs(relative_speed_knots):.0f} knots!")
         else:
-            message_parts.append("maintaining distance.")
+            message_parts.append("maintaining distance!")
 
     # pull the message parts together
     message = ' '.join(message_parts)
