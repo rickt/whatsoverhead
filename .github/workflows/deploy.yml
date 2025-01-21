@@ -23,11 +23,13 @@ jobs:
         working-directory: backend
         run: echo "Switched to backend directory"
 
-      # Step 3: Load .env variables (if needed)
+      # Step 3: Load .env variables 
       - name: Load environment variables from .env
         working-directory: backend
         run: |
-          export $(cat .env | xargs)
+          set -a
+          source .env
+          set +a
 
       # Step 4: Authenticate with GCP
       - name: Authenticate to GCP
