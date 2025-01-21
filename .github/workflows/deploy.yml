@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - dev
     paths:
       - backend/plane_api.py            # Trigger if plane_api.py is changed
       - backend/.env                    # Trigger if .env is changed
+      - backend/.env-dev                # Trigger if .env-dev is changed
       - .github/workflows/deploy.yml    # Trigger if workflow is changed
       - Dockerfile                      # Trigger if Dockerfile is changed
 
@@ -19,12 +21,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Load environment variables from .env
-      - name: Load .env into GITHUB_ENV
+      # Step 2: Load environment variables; use .env-dev if on the dev branch
+      - name: Load env file
         id: load_env
         working-directory: backend
         run: |
-          cat .env >> $GITHUB_ENV
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            cat .env-dev >> $GITHUB_ENV
+          else
+            cat .env >> $GITHUB_ENV
+          fi
 
       # Step 3: Authenticate with GCP
       - name: Authenticate with GCP
@@ -65,5 +71,3 @@ jobs:
             --allow-unauthenticated
 
 # EOF
-# added text at end of plane_api.py to test workflow(s)
-
