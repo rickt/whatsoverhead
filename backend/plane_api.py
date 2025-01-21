@@ -176,7 +176,7 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         }
 
         # log the entry to gcp logging
-        logger.log_struct(log_entry)
+        logger.log_struct(log_entry,  severity="INFO")
 
     # return 
     return nearest, min_distance
