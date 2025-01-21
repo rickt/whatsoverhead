@@ -63,3 +63,5 @@ jobs:
             --service-account ${{ env.GCP_SERVICE_ACCOUNT }} \
             --platform managed \
             --allow-unauthenticated
+
+# EOF
