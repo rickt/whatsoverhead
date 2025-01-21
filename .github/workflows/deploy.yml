@@ -8,6 +8,7 @@ on:
       - backend/plane_api.py            # Trigger if plane_api.py is changed
       - backend/.env                    # Trigger if .env is changed
       - .github/workflows/deploy.yml    # Trigger if workflow is changed
+      - Dockerfile                      # Trigger if Dockerfile is changed
 
 jobs:
   deploy:
