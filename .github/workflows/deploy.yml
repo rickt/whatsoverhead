@@ -5,8 +5,9 @@ on:
     branches:
       - main
     paths:
-      - backend/plane_api.py  # Trigger if plane_api.py is changed
-      - backend/.env          # Trigger if .env is changed
+      - backend/plane_api.py            # Trigger if plane_api.py is changed
+      - backend/.env                    # Trigger if .env is changed
+      - .github/workflows/deploy.yml    # Trigger if workflow is changed
 
 jobs:
   deploy:
@@ -43,25 +44,25 @@ jobs:
       - name: Build Docker image
         working-directory: backend
         run: |
-          docker build -t gcr.io/$GCP_PROJECT_ID/$ENDPOINT .
+          docker build -t gcr.io/${GCP_PROJECT_ID}/${ENDPOINT} .
 
       # Step 7: Push the Docker image
       - name: Push Docker image
         working-directory: backend
         run: |
-          docker push gcr.io/$GCP_PROJECT_ID/$ENDPOINT
+          docker push gcr.io/${GCP_PROJECT_ID}/${ENDPOINT}
 
       # Step 8: Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
-          gcloud beta run deploy $ENDPOINT \
-            --region $CLOUDRUN_REGION \
-            --image gcr.io/$GCP_PROJECT_ID/$ENDPOINT \
-            --port $PORT \
-            --cpu $CLOUDRUN_CPU \
+          gcloud beta run deploy ${ENDPOINT \
+            --region ${CLOUDRUN_REGION} \
+            --image gcr.io/${GCP_PROJECT_ID}/${ENDPOINT} \
+            --port ${PORT} \
+            --cpu ${CLOUDRUN_CPU} \
             --memory ${CLOUDRUN_MEMORY}Gi \
-            --max-instances $CLOUDRUN_MAXINSTANCES \
-            --concurrency $CLOUDRUN_CONCURRENCY \
-            --service-account $GCP_SERVICE_ACCOUNT \
+            --max-instances ${CLOUDRUN_MAXINSTANCES} \
+            --concurrency ${CLOUDRUN_CONCURRENCY} \
+            --service-account ${GCP_SERVICE_ACCOUNT} \
             --platform managed \
             --allow-unauthenticated
