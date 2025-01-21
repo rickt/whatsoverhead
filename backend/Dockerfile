@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # install python deps
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --root-user-action -r requirements.txt 
+RUN pip install --upgrade pip && pip install -r requirements.txt 
 
 # env & app code
 COPY .env .
