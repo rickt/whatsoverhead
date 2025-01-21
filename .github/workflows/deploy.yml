@@ -18,53 +18,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Change to backend directory
-      - name: Change directory to backend
-        working-directory: backend
-        run: echo "Switched to backend directory"
-
-      # Step 3: Load environment variables from .env
-      - name: Load environment variables from .env
+      # Step 2: Load environment variables from .env
+      - name: Load environment variables
+        id: load_env
         working-directory: backend
         run: |
-          set -a
-          source .env
-          set +a
+          cat .env >> $GITHUB_ENV
 
-      # Step 4: Authenticate with GCP
+      # Step 3: Authenticate with GCP
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
-      # Step 5: Authenticate Docker with GCP
+      # Step 4: Authenticate Docker with GCP
       - name: Authenticate Docker
         run: |
           gcloud auth configure-docker --quiet
 
-      # Step 6: Build Docker image
+      # Step 5: Build the Docker image
       - name: Build Docker image
         working-directory: backend
         run: |
-          docker build -t gcr.io/${GCP_PROJECT_ID}/${ENDPOINT} .
+          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} .
 
-      # Step 7: Push Docker image
+      # Step 6: Push the Docker image
       - name: Push Docker image
         working-directory: backend
         run: |
-          docker push gcr.io/${GCP_PROJECT_ID}/${ENDPOINT}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }}
 
-      # Step 8: Deploy to Cloud Run
+      # Step 7: Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
-          gcloud beta run deploy ${ENDPOINT} \
-            --region ${CLOUDRUN_REGION} \
-            --image gcr.io/${GCP_PROJECT_ID}/${ENDPOINT} \
-            --port ${PORT} \
-            --cpu ${CLOUDRUN_CPU} \
-            --memory ${CLOUDRUN_MEMORY}Gi \
-            --max-instances ${CLOUDRUN_MAXINSTANCES} \
-            --concurrency ${CLOUDRUN_CONCURRENCY} \
-            --service-account ${GCP_SERVICE_ACCOUNT} \
+          gcloud beta run deploy ${{ env.ENDPOINT }} \
+            --region ${{ env.CLOUDRUN_REGION }} \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} \
+            --port ${{ env.PORT }} \
+            --cpu ${{ env.CLOUDRUN_CPU }} \
+            --memory ${{ env.CLOUDRUN_MEMORY }}Gi \
+            --max-instances ${{ env.CLOUDRUN_MAXINSTANCES }} \
+            --concurrency ${{ env.CLOUDRUN_CONCURRENCY }} \
+            --service-account ${{ env.GCP_SERVICE_ACCOUNT }} \
             --platform managed \
             --allow-unauthenticated
