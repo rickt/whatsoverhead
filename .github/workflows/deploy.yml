@@ -35,7 +35,7 @@ jobs:
       # Step 4: Authenticate Docker with GCP
       - name: Authenticate Docker
         run: |
-          gcloud auth configure-docker --quiet
+          gcloud auth configure-docker gcr.io --quiet
 
       # Step 5: Docker build
       - name: Build Docker image
