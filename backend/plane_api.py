@@ -197,6 +197,13 @@ def get_aircraft_data(lat: float, lon: float, dist: float):
         # raise an http exception if there's an error decoding the json response
         raise HTTPException(status_code=502, detail="Error decoding json response from ads-b api.")
 
+def get_ordinal_direction(bearing: int) -> str:
+    # determine the ordinal direction from the bearing
+    # shift the bearing by 22.5 degrees
+    direction_index = int(((bearing + 22.5) % 360) // 45)
+    directions = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"]
+    return directions[direction_index]
+
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # calculate the distance between two lat/lon points using the haversine formula
     r_km = 6371.0  # earth's radius in kilometers
@@ -317,8 +324,9 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     if ownop:
         message_parts.append(f"operated by {ownop}")
 
-    # bearing
-    message_parts.append(f"at bearing {bearing}º,")
+    # bearing (with ordinal direction)
+    direction = get_ordinal_direction(bearing)
+    message_parts.append(f"at bearing {bearing}º ({direction}),")
 
     # altitude
     if used_altitude is not None:
