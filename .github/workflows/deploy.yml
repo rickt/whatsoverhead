@@ -44,10 +44,17 @@ jobs:
           gcloud auth configure-docker gcr.io --quiet
 
       # Step 5: Docker build
-      - name: Build Docker image
+      - name: Prepare .env if on dev
         working-directory: backend
         run: |
-          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} .
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            mv .env-dev .env
+          fi
+
+- name: Build Docker image
+  working-directory: backend
+  run: |
+    docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} .
 
       # Step 6: Docker push
       - name: Push Docker image
