@@ -25,6 +25,7 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
   {
   "status": "healthy"
   }
+  ```
 
 * nearest plane
  * GET `/nearest_plane`
