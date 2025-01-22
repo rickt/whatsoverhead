@@ -13,6 +13,14 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
 * scripts to build/push/deploy to GCP Cloud Run are in [scripts](https://github.com/rickt/whatsoverhead/tree/main/static)
 * i deploy automatically on commits to GCP Cloud Run using a [workflow ](https://github.com/rickt/whatsoverhead/tree/main/.github/workflors)but you can put it wherever. 
 
+## how it works
+1. use as a webpage
+* `/` home page or base URL renders the web page HTML/JS from the [static](https://github.com/rickt/whatsoverhead/tree/main/static) folder
+* asks user to allow giving their location to the webpage 
+* shows the user if any aircraft are overhead
+2. use as an API
+* `/nearest_plane` URL takes parameters and returns JSON or text as you prefer
+
 ## API endpoints
 * health check
   * GET `/health`
