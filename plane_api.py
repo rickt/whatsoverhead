@@ -235,11 +235,25 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 @app.get("/")
 def render_whatsoverhead(request: Request):
-    # serve the whatsoverhead template
+    # log it
+    log_entry = {
+        "message": f"{APP_NAME} v{APP_VERSION} rendering home page",
+        "severity": "INFO"
+    }
+    logger.log_struct(log_entry)
+
+    # serve the whatsoverhead template]
     return templates.TemplateResponse("whatsoverhead.html", {"request": request})
 
 @app.get("/health")
 def health_check():
+    # log it
+    log_entry = {
+        "message": f"{APP_NAME} v{APP_VERSION} rendering home page",
+        "severity": "INFO"
+    }
+    logger.log_struct(log_entry)
+    
     return {"status": "healthy"}
 
 @app.get("/nearest_plane")
