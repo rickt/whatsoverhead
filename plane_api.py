@@ -4,6 +4,7 @@ import logging
 from google.cloud.logging_v2.handlers import CloudLoggingHandler
 from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -46,7 +47,6 @@ app.add_middleware(
 )
 
 # static dir
-from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 #
@@ -165,19 +165,16 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
 
         # determine aircraft's altitude by various means
         if alt_baro is not None:
-            # barometric altitude
             try:
                 altitude = float(alt_baro)
             except (ValueError, TypeError):
                 continue
         elif alt_geom is not None:
-            # wgs84 altitude
             try:
                 altitude = float(alt_geom)
             except (ValueError, TypeError):
                 continue
         else:
-            # can't find good altitude for this aircraft, skip it
             continue
 
         # skip if altitude < 100ft
@@ -186,20 +183,17 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         if gs is None or gs == 0:
             continue
 
-        # aircraft is good. get its lat/lon
         aircraft_lat = aircraft.get('lat')
         aircraft_lon = aircraft.get('lon')
         if aircraft_lat is None or aircraft_lon is None:
             continue
 
-        # calculate the distance
         distance_km = haversine_distance(center_lat, center_lon, aircraft_lat, aircraft_lon)
         if distance_km < min_distance:
             min_distance = distance_km
             nearest = aircraft
 
     if nearest:
-        # prepare log entry
         log_entry = {
             "flight": nearest.get('flight', 'N/A').strip(),
             "description": nearest.get('desc', 'Unknown TIS-B aircraft'),
@@ -213,7 +207,6 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
             "bearing_deg": calculate_bearing(center_lat, center_lon, nearest.get('lat'), nearest.get('lon')),
             "timestamp": datetime.utcnow().isoformat() + 'Z'
         }
-        # log the entry
         logger.log_struct(log_entry, severity="INFO")
 
     return nearest, min_distance
@@ -254,7 +247,6 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 @app.get("/")
 def render_whatsoverhead(request: Request):
-    # log it
     log_entry = {
         "message": f"{APP_NAME} v{APP_VERSION} rendering home page",
         "severity": "INFO"
@@ -277,7 +269,28 @@ def health_check():
     return {"status": "healthy"}
 
 @app.get("/nearest_plane")
-def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: Optional[str] = "text"):
+def nearest_plane(
+    request: Request,  # added to capture incoming request
+    lat: float,
+    lon: float,
+    dist: Optional[float] = 5.0,
+    format: Optional[str] = "text"
+):
+    # capture real client ip
+    x_forwarded_for = request.headers.get('x-forwarded-for')
+    if x_forwarded_for:
+        real_ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        real_ip = request.client.host
+
+    # log the ip
+    logger.log_struct(
+        {
+            "message": f"request from ip: {real_ip}",
+            "severity": "INFO"
+        }
+    )
+
     if dist is None:
         dist = float(DISTANCE)
 
@@ -384,11 +397,12 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
 
     final_msg = ' '.join(message_parts)
 
-    log_entry = {
-        "message": final_msg,
-        "severity": "INFO"
-    }
-    logger.log_struct(log_entry)
+    logger.log_struct(
+        {
+            "message": final_msg,
+            "severity": "INFO"
+        }
+    )
 
     if format.lower() == "text":
         return Response(content=final_msg + "\n", media_type="text/plain")
