@@ -252,9 +252,9 @@ def render_whatsoverhead(request: Request):
     logger.log_struct(log_entry)
 
     # serve the whatsoverhead template
-    if DEV == True:
+    if DEV == "True":
         return templates.TemplateResponse("whatsoverhead_dev.html", {"request": request})
-    elif DEV == False:
+    else:
         return templates.TemplateResponse("whatsoverhead.html", {"request": request})
 
 @app.get("/health")
