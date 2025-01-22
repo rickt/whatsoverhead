@@ -1,4 +1,4 @@
-name: Deploy whatsoverhead API to Cloud Run
+name: deploy whatsoverhead to GCP Cloud Run
 
 on:
   push:
@@ -6,22 +6,24 @@ on:
       - main
       - dev
     paths:
-      - plane_api.py            # Trigger if plane_api.py is changed
-      - .env                    # Trigger if .env is changed
-      - .env-dev                # Trigger if .env-dev is changed
-      - .github/workflows/deploy.yml    # Trigger if workflow is changed
-      - Dockerfile                      # Trigger if Dockerfile is changed
+      - plane_api.py
+      - .env
+      - .env-dev
+      - .github/workflows/deploy.yml
+      - Dockerfile
+      - templates/whatsoverhead.html
+      - templates/whatsoverhead_dev.html
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the code
+      # Step 1: check out the code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Load environment variables; use .env-dev if on the dev branch
+      # Step 2: load environment variables; use .env-dev if on the dev branch
       - name: Load env file
         id: load_env
         working-directory: .
@@ -32,18 +34,18 @@ jobs:
             cat .env >> $GITHUB_ENV
           fi
 
-      # Step 3: Authenticate with GCP
+      # Step 3: auth with GCP
       - name: Authenticate with GCP
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
-      # Step 4: Authenticate Docker with GCP
+      # Step 4: auth Docker with GCP
       - name: Authenticate Docker
         run: |
           gcloud auth configure-docker gcr.io --quiet
 
-      # Step 5: Prepare .env if on dev
+      # Step 5: prepare .env if on dev branch
       - name: Prepare .env if on dev
         working-directory: .
         run: |
@@ -51,19 +53,19 @@ jobs:
             mv .env-dev .env
           fi
 
-      # Step 6: Build Docker image
+      # Step 6: docker build
       - name: Build Docker image
         working-directory: .
         run: |
           docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} .
 
-      # Step 7: Docker push
+      # Step 7: docker push
       - name: Push Docker image
         working-directory: .
         run: |
           docker push gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }}
 
-      # Step 8: Deploy to Cloud Run
+      # Step 8: deploy
       - name: Deploy to Cloud Run
         run: |
           gcloud beta run deploy ${{ env.ENDPOINT }} \
