@@ -169,13 +169,10 @@
         // select the button and result div
         const findPlaneBtn = document.getElementById('findPlaneBtn');
         const resultDiv = document.getElementById('result');
-        const spinner = document.getElementById('spinner');
 
         // func to display messages
         function displayMessage(message, isError = false) {
-            spinner.classList.add('d-none'); // hide spinner
             resultDiv.innerHTML = ''; // clear previous content
-
             const p = document.createElement('p');
             p.textContent = message;
             p.className = isError ? 'error' : 'success';
@@ -218,7 +215,6 @@
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
             const distance = 5; // in kilometers
-            // build the query
             const params = new URLSearchParams({
                 lat: latitude,
                 lon: longitude,
@@ -226,30 +222,25 @@
                 format: "text"
             });
 
-            // construct url
             const url = `https://api.whatsoverhead.rickt.dev/nearest_plane?${params.toString()}`;
 
-            // send it
             fetch(url)
                 .then(response => {
                     if (!response.ok) {
-                        // if not ok, get error text
                         return response.text().then(errText => {
                             throw new Error(errText || 'unknown error occurred.');
                         });
                     }
-                    // ok
                     return response.text();
                 })
                 .then(data => {
-                    // we're good, build & send output
                     if (data) {
                         displayMessage(data, false);
                         const mapUrl = `https://globe.adsbexchange.com/?lat=${latitude}&lon=${longitude}&zoom=12.5`;
                         const link = document.createElement('a');
                         link.href = mapUrl;
                         link.textContent = 'Click HERE for aircraft map above you.';
-                        link.target = '_blank'; // open in new tab
+                        link.target = '_blank';
                         link.rel = 'noopener noreferrer';
                         link.className = 'link-centered';
                         resultDiv.appendChild(link);
@@ -258,7 +249,6 @@
                     }
                 })
                 .catch(error => {
-                    // display the error message
                     if (error.message) {
                         displayMessage(error.message, true);
                     } else {
@@ -286,20 +276,17 @@
             }
         }
 
-        // tickle the cloud run instance healthcheck to pre-warm it ready for user click
+        // tickle the cloud run instance healthcheck to pre-warm it
         setTimeout(() => {
-            // send an asynchronous and silent get to the health endpoint
             fetch('https://api.whatsoverhead.rickt.dev/health')
                 .then(response => response.json())
                 .then(data => {
-                    // log the health status to the console
                     console.log(`what's overhead api health status: ${data.status}`);
                 })
                 .catch(error => {
-                    // log the error to the console
                     console.error('error fetching what\'s overhead health status:', error);
                 });
-        }, 1000); // hit healthcheck url 1 second after page load
+        }, 1000);
     </script>
 </body>
 </html>

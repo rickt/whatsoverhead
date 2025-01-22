@@ -22,8 +22,10 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt 
 
 # env & app code
-COPY .env .
-COPY plane_api.py .
+COPY .env /app/
+COPY plane_api.py /app/
+COPY templates/ /app/templates/
+COPY static /app/static/
 
 # port
 EXPOSE 8000

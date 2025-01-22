@@ -1,7 +1,8 @@
 # plane_api.py
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from typing import Optional
 import requests
@@ -33,10 +34,10 @@ allowed_origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins, 
-    allow_credentials=False, 
-    allow_methods=["GET"], 
-    allow_headers=["*"], 
+    allow_origins=allowed_origins,
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["*"],
 )
 
 #
@@ -45,6 +46,12 @@ app.add_middleware(
 
 logging_client = gcp_logging.Client()
 logger = logging_client.logger(GCP_LOG)
+
+#
+# templates
+#
+
+templates = Jinja2Templates(directory="templates")
 
 #
 # classes
@@ -63,17 +70,17 @@ class AircraftResponse(BaseModel):
     flight: str
     desc: str
     alt_baro: Optional[str] = None
-    alt_geom: Optional[int] = None 
-    gs: Optional[int] = None 
-    track: Optional[int] = None 
+    alt_geom: Optional[int] = None
+    gs: Optional[int] = None
+    track: Optional[int] = None
     year: Optional[int] = None
     ownop: Optional[str] = None
     distance_km: float
     bearing: int
-    relative_speed_knots: Optional[float] = None 
+    relative_speed_knots: Optional[float] = None
     message: Optional[str] = None
 
-# 
+#
 # funcs
 #
 
@@ -93,13 +100,13 @@ def calculate_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> int
 def calculate_relative_speed(gs: float, aircraft_track: float, user_to_aircraft_bearing: float) -> float:
     # calculate the bearing from aircraft to user
     aircraft_to_user_bearing = (user_to_aircraft_bearing + 180) % 360
-    
+
     # calculate the angle difference between the aircraft's track and the bearing to user
     angle_diff = aircraft_track - aircraft_to_user_bearing
-    
+
     # normalize the angle to be within [-180, 180]
     angle_diff = (angle_diff + 180) % 360 - 180
-    
+
     # calculate the relative speed
     relative_speed = gs * cos(radians(angle_diff))
     return relative_speed  # positive: approaching, negative: moving away
@@ -141,17 +148,17 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
 
         # skip if altitude < 100ft
         if altitude <= 100:
-            continue 
+            continue
         if gs is None or gs == 0:
             # skip aircraft with speed 0 or null
-            continue  
+            continue
 
         # aircraft is good. get its lat/lon
         aircraft_lat = aircraft.get('lat')
         aircraft_lon = aircraft.get('lon')
         if aircraft_lat is None or aircraft_lon is None:
             # skip if lat or lon is missing
-            continue  
+            continue
 
         # calculate the distance from reported user position
         distance_km = haversine_distance(center_lat, center_lon, aircraft_lat, aircraft_lon)
@@ -172,13 +179,13 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
             "operator": nearest.get('ownOp'),
             "distance_km": min_distance,
             "bearing_deg": calculate_bearing(center_lat, center_lon, nearest.get('lat'), nearest.get('lon')),
-            "timestamp": datetime.utcnow().isoformat() + 'Z' 
+            "timestamp": datetime.utcnow().isoformat() + 'Z'
         }
 
         # log the entry to gcp logging
-        logger.log_struct(log_entry,  severity="INFO")
+        logger.log_struct(log_entry, severity="INFO")
 
-    # return 
+    # return
     return nearest, min_distance
 
 def get_aircraft_data(lat: float, lon: float, dist: float):
@@ -206,18 +213,23 @@ def get_ordinal_direction(bearing: int) -> str:
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # calculate the distance between two lat/lon points using the haversine formula
-    r_km = 6371.0  # earth's radius in kilometers
+    r_km = 6371.0
     lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
-    dlon = lon2_rad - lon1_rad 
-    dlat = lat2_rad - lat1_rad 
+    dlon = lon2_rad - lon1_rad
+    dlat = lat2_rad - lat1_rad
     a = sin(dlat/2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
+    c = 2 * asin(sqrt(a))
     distance_km = r_km * c
     return distance_km
 
 #
 # api endpoints
 #
+
+@app.get("/")
+def render_whatsoverhead(request: Request):
+    # serve the whatsoverhead template
+    return templates.TemplateResponse("whatsoverhead.html", {"request": request})
 
 @app.get("/health")
 def health_check():
@@ -227,13 +239,12 @@ def health_check():
 def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: Optional[str] = "text"):
     if dist is None:
         dist = float(DISTANCE)
-        
+
     # get the aircraft data from the ads-b api
     data = get_aircraft_data(lat, lon, dist)
     aircraft_list = data.get('aircraft', [])
 
     if not aircraft_list:
-        # return a 200 response with a message if no aircraft are found
         message = "No aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
@@ -250,11 +261,9 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             message=message
         )
 
-    # find the nearest aircraft with valid altitude and speed
     nearest_aircraft, distance_km = find_nearest_aircraft(aircraft_list, lat, lon)
 
     if not nearest_aircraft:
-        # return a 200 response with a message if no valid aircraft are found
         message = "No aircraft found within the specified radius."
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
@@ -271,7 +280,6 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             message=message
         )
 
-    # extract necessary information from the nearest aircraft
     flight = nearest_aircraft.get('flight', 'N/A').strip()
     desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
@@ -285,18 +293,16 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
     distance_km = round(distance_km, 1)
 
-    # ensure gs and track are integers or none
     if isinstance(gs, (int, float)):
         gs = int(round(gs))
     else:
-        gs = None 
+        gs = None
 
     if isinstance(track, (int, float)):
         track = int(round(track))
     else:
-        track = None  
+        track = None
 
-    # determine which altitude to use
     if alt_baro is not None and not isinstance(alt_baro, str):
         used_altitude = alt_baro
     elif alt_geom is not None:
@@ -304,45 +310,27 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     else:
         used_altitude = None
 
-    # calculate the relative speed
     if gs is not None and track is not None:
         relative_speed_knots = calculate_relative_speed(gs, track, bearing)
     else:
         relative_speed_knots = None
 
-    # construct the message
     message_parts = [f"{flight} is a"]
-
-    # year
     if year:
         message_parts.append(f"{year}")
-
-    # description 
     message_parts.append(f"{desc}")
-
-    # owner/operator
     if ownop:
         message_parts.append(f"operated by {ownop}")
-
-    # bearing (with ordinal direction)
     direction = get_ordinal_direction(bearing)
     message_parts.append(f"at bearing {bearing}º ({direction}),")
-
-    # altitude
     if used_altitude is not None:
         message_parts.append(f"{distance_km} kilometers away at {used_altitude}ft,")
     else:
         message_parts.append(f"{distance_km} kilometers away,")
-
-    # ground speed
     if gs is not None:
         message_parts.append(f"speed {gs} knots,")
-    
-    # track
     if track is not None:
         message_parts.append(f"ground track {track}º,")
-
-    # relative speed
     if relative_speed_knots is not None:
         if relative_speed_knots > 0:
             message_parts.append(f"approaching at {relative_speed_knots:.0f} knots.")
@@ -351,19 +339,13 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         else:
             message_parts.append("maintaining distance.")
 
-    # pull the message parts together
     message = ' '.join(message_parts)
-
-    # prepare log entry
     log_entry = {
         "message": message,
         "severity": "INFO"
     }
-    
-    # log the entry to gcp logging
     logger.log_struct(log_entry)
 
-    # return the response based on the requested format
     if format.lower() == "text":
         return Response(content=message + "\n", media_type="text/plain")
 
