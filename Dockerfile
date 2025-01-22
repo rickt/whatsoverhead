@@ -27,9 +27,6 @@ COPY plane_api.py /app/
 COPY templates/ /app/templates/
 COPY static /app/static/
 
-# port
-EXPOSE 8000
-
 # lets gooo
 CMD ["uvicorn", "plane_api:app", "--host", "0.0.0.0", "--port", "8080"]
 
