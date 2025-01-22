@@ -9,13 +9,13 @@ a self-contained python app that reports if any aircraft are overhead of a given
 
 uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/opendata/blob/main/README.md). 
 
-* static assets (frontend HTML/JS, a PNG and an .ico) are in [static](https://github.com/rickt/whatsoverhead/tree/main/static)
+* static assets (frontend HTML/JS, a PNG and an .ico) are in the [static](https://github.com/rickt/whatsoverhead/tree/main/static) and [templates](https://github.com/rickt/whatsoverhead/tree/main/templates) folders
 * scripts to build/push/deploy to GCP Cloud Run are in [scripts](https://github.com/rickt/whatsoverhead/tree/main/static)
-* i deploy automatically on commits to GCP Cloud Run using a [workflow ](https://github.com/rickt/whatsoverhead/tree/main/.github/workflors)but you can put it wherever. 
+* i deploy automatically on commits to GCP Cloud Run using a [workflow ](https://github.com/rickt/whatsoverhead/tree/main/.github/workflors) but you can put it wherever. 
 
 ## how it works
 1. use as a webpage
-* `/` home page or base URL renders the web page HTML/JS from the [static](https://github.com/rickt/whatsoverhead/tree/main/static) folder
+* `/` home page or base URL renders the web page HTML/JS from the [templates](https://github.com/rickt/whatsoverhead/tree/main/templates) folder
 * asks user to allow giving their location to the webpage 
 * shows the user if any aircraft are overhead
 2. use as an API
@@ -76,6 +76,9 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
              "detail": "Error fetching data from ads-b API: Timeout occurred."
           }
           ```
+
+## notes
+* the github [workflow ](https://github.com/rickt/whatsoverhead/tree/main/.github/workflors) has separate deploy logic for commits to dev or main
 
 ## inspiration
 inspiration for this came from John Wiseman's [whatsoverhead.com](https://whatsoverhead.com), which i loved! i wanted to know how it works and ended up writing my own version. 
