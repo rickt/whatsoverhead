@@ -20,6 +20,7 @@ load_dotenv(override=True)
 ADSB_API = os.getenv("ADSB_API")
 APP_NAME = os.getenv("APP_NAME")
 APP_VERSION = os.getenv("APP_VERSION")
+DEV = os.getenv("DEV")
 DISTANCE = os.getenv("DISTANCE")
 GCP_LOG = os.getenv("GCP_LOG")
 
@@ -57,7 +58,7 @@ logger = logging_client.logger(GCP_LOG)
 # say hello
 # log it
 log_entry = {
-    "message": f"{APP_NAME} v{APP_VERSION} starting up (GCP_LOG={GCP_LOG})",
+    "message": f"{APP_NAME} v{APP_VERSION} starting up",
     "severity": "INFO"
 }
 logger.log_struct(log_entry)
@@ -250,8 +251,11 @@ def render_whatsoverhead(request: Request):
     }
     logger.log_struct(log_entry)
 
-    # serve the whatsoverhead template]
-    return templates.TemplateResponse("whatsoverhead.html", {"request": request})
+    # serve the whatsoverhead template
+    if DEV == True:
+        return templates.TemplateResponse("whatsoverhead_dev.html", {"request": request})
+    elif DEV == False:
+        return templates.TemplateResponse("whatsoverhead.html", {"request": request})
 
 @app.get("/health")
 def health_check():
