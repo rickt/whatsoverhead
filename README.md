@@ -22,8 +22,13 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
 * `/nearest_plane` URL takes parameters and returns JSON or text as you prefer
 
 ## API endpoints
+* render web page
+  * **GET** `/`
+  * description:
+    * renders the home page of the app
+    
 * health check
-  * GET `/health`
+  * **GET** `/health`
   * description:
     * returns health status of the API
   * parameters:
@@ -36,7 +41,7 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
     ```
 
 * nearest plane
-  * GET `/nearest_plane`
+  * **GET** `/nearest_plane`
   * description:
     * returns the nearest aircraft to the given coordinates within a specified distance
      * parameters:
