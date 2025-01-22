@@ -24,13 +24,17 @@ DISTANCE = os.getenv("DISTANCE")
 GCP_LOG = os.getenv("GCP_LOG")
 
 #
-# app / cors (todo: fix)
+# app
 #
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION)
+
+# CORS
 allowed_origins = [
     "https://whatsoverhead.rickt.dev",
     "https://whatsoverhead-dev.rickt.dev",
+    "https://whatsoverhead-772908953539.us-central1.run.app",
+    "https://whatsoverhead-dev-772908953539.us-central1.run.app"
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -39,6 +43,11 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+# static
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 #
 # gcp logging client
@@ -364,5 +373,4 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         message=message
     )
 
-# EOF
 # EOF
