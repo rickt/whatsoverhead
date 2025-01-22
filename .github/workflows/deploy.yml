@@ -67,7 +67,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud beta run deploy ${{ env.ENDPOINT }} \
-            --region ${{ env.CLOUDRUN_REGION }} \
+            --region ${{ env.GCP_REGION }} \
             --image gcr.io/${{ env.GCP_PROJECT_ID }}/${{ env.ENDPOINT }} \
             --port ${{ env.PORT }} \
             --cpu ${{ env.CLOUDRUN_CPU }} \
