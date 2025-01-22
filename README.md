@@ -32,7 +32,7 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
  * description:
   * returns the nearest aircraft to the given coordinates within a specified distance
  * parameters:
-  * | Name   | Type   | Default | Description                           |
+    | Name   | Type   | Default | Description                           |
     |--------|--------|---------|---------------------------------------|
     | lat    | float  | None    | Latitude of the location (required).  |
     | lon    | float  | None    | Longitude of the location (required). |
