@@ -42,7 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# static
+# static dir
 from fastapi.staticfiles import StaticFiles
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -251,6 +251,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     data = get_aircraft_data(lat, lon, dist)
     aircraft_list = data.get('aircraft', [])
 
+    # no aircraft nearby
     if not aircraft_list:
         message = "No aircraft found within the specified radius."
         if format.lower() == "text":
@@ -268,12 +269,18 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             message=message
         )
 
+    # we have aircraft(s), fine the nearest one
     nearest_aircraft, distance_km = find_nearest_aircraft(aircraft_list, lat, lon)
 
+    # nope
     if not nearest_aircraft:
         message = "No aircraft found within the specified radius."
+
+        # return text
         if format.lower() == "text":
             return Response(content=message, media_type="text/plain")
+        
+        # return fancy
         return AircraftResponse(
             flight="N/A",
             desc=message,
@@ -287,6 +294,7 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
             message=message
         )
 
+    # we have a nearest aircraft, get the details
     flight = nearest_aircraft.get('flight', 'N/A').strip()
     desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
@@ -300,16 +308,19 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
     distance_km = round(distance_km, 1)
 
+    # ground speed?
     if isinstance(gs, (int, float)):
         gs = int(round(gs))
     else:
         gs = None
 
+    # track speed?
     if isinstance(track, (int, float)):
         track = int(round(track))
     else:
         track = None
 
+    # grok useful altitude data 
     if alt_baro is not None and not isinstance(alt_baro, str):
         used_altitude = alt_baro
     elif alt_geom is not None:
@@ -317,27 +328,38 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
     else:
         used_altitude = None
 
+    # if we have ground speed and track speed we can calculate the relative speed 
     if gs is not None and track is not None:
         relative_speed_knots = calculate_relative_speed(gs, track, bearing)
     else:
         relative_speed_knots = None
 
+    # assemble the parts of the message
     message_parts = [f"{flight} is a"]
+
     if year:
         message_parts.append(f"{year}")
+
     message_parts.append(f"{desc}")
+
     if ownop:
         message_parts.append(f"operated by {ownop}")
+
     direction = get_ordinal_direction(bearing)
+
     message_parts.append(f"at bearing {bearing}º ({direction}),")
+
     if used_altitude is not None:
         message_parts.append(f"{distance_km} kilometers away at {used_altitude}ft,")
     else:
         message_parts.append(f"{distance_km} kilometers away,")
+
     if gs is not None:
         message_parts.append(f"speed {gs} knots,")
+
     if track is not None:
         message_parts.append(f"ground track {track}º,")
+
     if relative_speed_knots is not None:
         if relative_speed_knots > 0:
             message_parts.append(f"approaching at {relative_speed_knots:.0f} knots.")
@@ -346,16 +368,21 @@ def nearest_plane(lat: float, lon: float, dist: Optional[float] = 5.0, format: O
         else:
             message_parts.append("maintaining distance.")
 
+    # bundle
     message = ' '.join(message_parts)
+
+    # log it
     log_entry = {
         "message": message,
         "severity": "INFO"
     }
     logger.log_struct(log_entry)
 
+    # return text
     if format.lower() == "text":
         return Response(content=message + "\n", media_type="text/plain")
 
+    # return fancy
     return AircraftResponse(
         flight=flight,
         desc=desc,
