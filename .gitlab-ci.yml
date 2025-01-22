@@ -1,0 +1,61 @@
+# auto deploy whatsoverhead to Cloud Run
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  image: google/cloud-sdk:latest
+
+  # only run on main or dev; only if certain files changed
+  only:
+    refs:
+      - main
+      - dev
+    changes:
+      - plane_api.py
+      - .env
+      - .env-dev
+      - Dockerfile
+      - templates/whatsoverhead.html
+      - templates/whatsoverhead_dev.html
+
+  script:
+    # 1. if dev branch, replace .env with .env-dev
+    - if [ "$CI_COMMIT_REF_NAME" = "dev" ]; then mv .env-dev .env; fi
+
+    # 2. auth with gcp (service account key in gitlab ci variables)
+    - echo "$GCP_SERVICE_ACCOUNT_KEY" | gcloud auth activate-service-account --key-file=-
+
+    # 3. configure docker with gcr
+    - gcloud auth configure-docker gcr.io --quiet
+
+    # 4. load .env variables
+    - source .env
+
+    # 5. debug env variables
+    - echo "Using GCP_PROJECT_ID=$GCP_PROJECT_ID"
+    - echo "Using ENDPOINT=$ENDPOINT"
+
+    # 6. build docker image
+    - docker build -t gcr.io/$GCP_PROJECT_ID/$ENDPOINT .
+
+    # 7. push docker image
+    - docker push gcr.io/$GCP_PROJECT_ID/$ENDPOINT
+
+    # 8. deploy to cloud run (use a single script block with proper backslashes)
+    - |
+      gcloud beta run deploy "$ENDPOINT" \
+        --project "$GCP_PROJECT_ID" \
+        --region "$GCP_REGION" \
+        --image "gcr.io/$GCP_PROJECT_ID/$ENDPOINT" \
+        --port "$PORT" \
+        --cpu "$CLOUDRUN_CPU" \
+        --memory "${CLOUDRUN_MEMORY}Gi" \
+        --max-instances "$CLOUDRUN_MAXINSTANCES" \
+        --concurrency "$CLOUDRUN_CONCURRENCY" \
+        --service-account "$GCP_SERVICE_ACCOUNT" \
+        --platform managed \
+        --allow-unauthenticated
+
+# EOF
