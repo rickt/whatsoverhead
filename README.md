@@ -26,7 +26,7 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
   * **GET** `/`
   * description:
     * renders the home page of the app
-    
+
 * health check
   * **GET** `/health`
   * description:
@@ -83,7 +83,7 @@ uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/o
           ```
 
 ## notes
-* the github [workflow ](https://github.com/rickt/whatsoverhead/tree/main/.github/workflors) has separate deploy logic for commits to dev or main
+* the github [workflow](https://github.com/rickt/whatsoverhead/tree/main/.github/workflows) has separate deploy logic for commits to dev or main
 
 ## inspiration
 inspiration for this came from John Wiseman's [whatsoverhead.com](https://whatsoverhead.com), which i loved! i wanted to know how it works and ended up writing my own version. 
