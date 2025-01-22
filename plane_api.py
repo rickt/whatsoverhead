@@ -54,6 +54,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 logging_client = gcp_logging.Client()
 logger = logging_client.logger(GCP_LOG)
 
+# say hello
+# log it
+log_entry = {
+    "message": f"{APP_NAME} v{APP_VERSION} starting up (GCP_LOG={GCP_LOG})",
+    "severity": "INFO"
+}
+logger.log_struct(log_entry)
+
 #
 # templates
 #
@@ -253,7 +261,7 @@ def health_check():
         "severity": "INFO"
     }
     logger.log_struct(log_entry)
-    
+
     return {"status": "healthy"}
 
 @app.get("/nearest_plane")
