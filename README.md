@@ -10,7 +10,7 @@ a self-contained python app that reports if any aircraft are overhead of a given
 uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/opendata/blob/main/README.md). 
 
 * static assets (frontend HTML/JS, a PNG and an .ico) are in the [static](https://github.com/rickt/whatsoverhead/tree/main/static) and [templates](https://github.com/rickt/whatsoverhead/tree/main/templates) folders
-* scripts to build/push/deploy to GCP Cloud Run are in [scripts](https://github.com/rickt/whatsoverhead/tree/main/scripts)
+* (old) scripts to build/push/deploy to GCP Cloud Run are in [scripts](https://github.com/rickt/whatsoverhead/tree/main/scripts)
 * i deploy automatically on commits to GCP Cloud Run using a [workflow](https://github.com/rickt/whatsoverhead/tree/main/.github/workflows) but you can put it wherever. 
 
 ## how it works
