@@ -5,11 +5,13 @@ live demo: [https://whatsoverhead.rickt.dev](https://whatsoverhead.rickt.dev)
 
 ## what is it
 
-[front](https://github.com/rickt/whatsoverhead/tree/main/frontend) and [backend](https://github.com/rickt/whatsoverhead/tree/main/backend) src for a simple "what aircraft is overhead" app.
+a self-contained python app that reports if any aircraft are overhead of a given location / set of coordinates. 
 
-[backend](https://github.com/rickt/whatsoverhead/tree/main/backend) is python, uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/opendata/blob/main/README.md), i deployed to GCP Cloud Run but you can put it wherever. 
+uses the free [adsb.fi](https://adsb.fi) [ADS-B API](https://github.com/adsbfi/opendata/blob/main/README.md). 
 
-[frontend](https://github.com/rickt/whatsoverhead/tree/main/frontend) is simple HTML + JS.
+* static assets (frontend HTML/JS, a PNG and an .ico) are in [static](https://github.com/rickt/whatsoverhead/tree/main/static)
+* scripts to build/push/deploy to GCP Cloud Run are in [scripts](https://github.com/rickt/whatsoverhead/tree/main/static)
+* i deploy automatically on commits to GCP Cloud Run using a [workflow ](https://github.com/rickt/whatsoverhead/tree/main/.github/workflors)but you can put it wherever. 
 
 ## inspiration
 inspiration for this came from John Wiseman's [whatsoverhead.com](https://whatsoverhead.com), which i loved! i wanted to know how it works and ended up writing my own version. 
