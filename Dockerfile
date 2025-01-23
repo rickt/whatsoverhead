@@ -28,7 +28,7 @@ COPY templates/ /app/templates/
 COPY static /app/static/
 
 # lets gooo
-CMD ["uvicorn", "plane_api:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "plane_api:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers"]
 
 # EOF
 
