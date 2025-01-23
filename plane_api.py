@@ -283,20 +283,6 @@ def nearest_plane(
     dist: Optional[float] = 5.0,
     format: Optional[str] = "text"
 ):
-    # capture real client ip
-    x_forwarded_for = request.headers.get('x-forwarded-for')
-    if x_forwarded_for:
-        real_ip = x_forwarded_for.split(',')[0].strip()
-    else:
-        real_ip = request.client.host
-
-    # log the ip
-    logger.log_struct(
-        {
-            "message": f"request from ip: {real_ip}",
-            "severity": "INFO"
-        }
-    )
 
     if dist is None:
         dist = float(DISTANCE)
