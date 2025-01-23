@@ -190,11 +190,13 @@ def find_nearest_aircraft(aircraft_list: list, center_lat: float, center_lon: fl
         if gs is None or gs == 0:
             continue
 
+        # skip if no lat/lon
         aircraft_lat = aircraft.get('lat')
         aircraft_lon = aircraft.get('lon')
         if aircraft_lat is None or aircraft_lon is None:
             continue
 
+        # calculate the distance
         distance_km = haversine_distance(center_lat, center_lon, aircraft_lat, aircraft_lon)
         if distance_km < min_distance:
             min_distance = distance_km
@@ -260,6 +262,7 @@ def render_whatsoverhead(request: Request):
     }
     logger.log_struct(log_entry)
 
+    # return different HTML if dev or prod (!dev)
     if DEV == "True":
         return templates.TemplateResponse("whatsoverhead_dev.html", {"request": request})
     else:
@@ -290,6 +293,7 @@ def nearest_plane(
     data = get_aircraft_data(lat, lon, dist)
     aircraft_list = data.get('aircraft', [])
 
+    # no aircraft returned, sorry
     if not aircraft_list:
         message = "No aircraft found within the specified radius."
         if format.lower() == "text":
@@ -325,6 +329,7 @@ def nearest_plane(
             message=message
         )
 
+    # ok we have a nearest aircraft. get it's details
     flight = nearest_aircraft.get('flight', 'N/A').strip()
     desc = nearest_aircraft.get('desc', 'Unknown TIS-B aircraft')
     alt_baro = nearest_aircraft.get('alt_baro')
@@ -338,16 +343,19 @@ def nearest_plane(
     bearing = calculate_bearing(lat, lon, aircraft_lat, aircraft_lon)
     distance_km = round(distance_km, 1)
 
+    # ground speed
     if isinstance(gs, (int, float)):
         gs = int(round(gs))
     else:
         gs = None
 
+    # track speed
     if isinstance(track, (int, float)):
         track = int(round(track))
     else:
         track = None
 
+    # determine which altitude to use
     if alt_baro is not None and not isinstance(alt_baro, str):
         used_altitude = alt_baro
     elif alt_geom is not None:
@@ -355,11 +363,13 @@ def nearest_plane(
     else:
         used_altitude = None
 
+    # calculate relative speed based on ground speed and track
     if gs is not None and track is not None:
         relative_speed_knots = calculate_relative_speed(gs, track, bearing)
     else:
         relative_speed_knots = None
 
+    # build the message parts
     message_parts = [f"{flight} is a"]
     if year:
         message_parts.append(f"{year}")
@@ -388,8 +398,10 @@ def nearest_plane(
         else:
             message_parts.append("maintaining distance.")
 
+    # join the message parts up
     final_msg = ' '.join(message_parts)
 
+    # log it
     logger.log_struct(
         {
             "message": final_msg,
@@ -397,9 +409,11 @@ def nearest_plane(
         }
     )
 
+    # text requested, return simple
     if format.lower() == "text":
         return Response(content=final_msg + "\n", media_type="text/plain")
 
+    # return fancy
     return AircraftResponse(
         flight=flight,
         desc=desc,
