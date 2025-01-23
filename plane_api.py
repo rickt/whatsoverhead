@@ -46,6 +46,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# get real IP addr
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts="*"
+)
+
 # static dir
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
