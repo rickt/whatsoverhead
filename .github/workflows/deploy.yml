@@ -11,6 +11,7 @@ on:
       - .env-dev
       - .github/workflows/deploy.yml
       - Dockerfile
+      - static/*
       - templates/whatsoverhead.html
       - templates/whatsoverhead_dev.html
 
