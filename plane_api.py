@@ -36,7 +36,11 @@ app = FastAPI(title=APP_NAME, version=APP_VERSION)
 # cors
 allowed_origins = [
     "https://whatsoverhead.rickt.dev",
-    "https://whatsoverhead-dev.rickt.dev"
+    "https://whatsoverhead-dev.rickt.dev",
+    "https://takingoff.rickt.dev",
+    "https://takingoff-dev.rickt.dev",
+    "https://lax.takingoff.rickt.dev",
+    "https://lax.takingoff-dev.rickt.dev"
 ]
 app.add_middleware(
     CORSMiddleware,
