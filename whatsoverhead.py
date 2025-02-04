@@ -258,30 +258,21 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 # api endpoints
 #
 
+# home page render
 @app.get("/")
 def render_whatsoverhead(request: Request):
-    log_entry = {
-        "message": f"{APP_NAME} v{APP_VERSION} rendering home page",
-        "severity": "INFO"
-    }
-    logger.log_struct(log_entry)
-
     # return different HTML if dev or prod (!dev)
     if DEV == "True":
         return templates.TemplateResponse("whatsoverhead_dev.html", {"request": request})
     else:
         return templates.TemplateResponse("whatsoverhead.html", {"request": request})
 
+# healthcheck
 @app.get("/health")
 def health_check():
-    log_entry = {
-        "message": f"{APP_NAME} v{APP_VERSION} rendering home page",
-        "severity": "INFO"
-    }
-    logger.log_struct(log_entry)
-
     return {"status": "healthy"}
 
+# find nearest plane
 @app.get("/nearest_plane")
 def nearest_plane(
     request: Request,  # added to capture incoming request
