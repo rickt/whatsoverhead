@@ -6,7 +6,7 @@ on:
       - main
       - dev
     paths:
-      - plane_api.py
+      - whatsoverhead.py
       - .env
       - .env-dev
       - .github/workflows/deploy.yml

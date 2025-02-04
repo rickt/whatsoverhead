@@ -23,7 +23,7 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # env & app code
 COPY .env /app/
-COPY plane_api.py /app/
+COPY whatsoverhead.py /app/
 COPY templates/ /app/templates/
 COPY static /app/static/
 
